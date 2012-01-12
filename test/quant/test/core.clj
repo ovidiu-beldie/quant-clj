@@ -1,9 +1,5 @@
 (ns quant.test.core
   (:use 
 		[quant.core]
-		[clojure.test :only (deftest)])
-	(:require	
-		[quant.math.integrals.gauss-polynomials.jacobi :as jacobi]))
+		[clojure.test :only (deftest)]))
 
-(deftest all 
- 	(jacobi/all-tests)) 
