@@ -13,13 +13,11 @@
 		(is (thrown? ArithmeticException (compute :beta [1 2] -3/2 :regular)))	
 		(is (= 2/9 (compute :beta [1 2] 3 :regular)))))
 
-(deftest test-do-if-params-valid
-	(letfn [(func []
-						(+ 1 1))]
-		(is (= 2 (do-if-params-valid [0 0] func)))
-		(is (thrown? IllegalArgumentException (do-if-params-valid [-1 0] func)))
-		(is (thrown? IllegalArgumentException (do-if-params-valid [0 -1] func)))
-		(is (thrown? IllegalArgumentException (do-if-params-valid [-1 -1] func)))))
+(deftest test-params-valid?
+		(is (true? (params-valid? [0 0])))
+		(is (false? (params-valid? [-1 0])))
+		(is (false? (params-valid? [0 -1])))
+		(is (false? (params-valid? [-1 -1]))))
 
 (deftest test-lim-ops-a-r
 	(is (= [0 0] (lim-ops-a-r [0 0] 0)))

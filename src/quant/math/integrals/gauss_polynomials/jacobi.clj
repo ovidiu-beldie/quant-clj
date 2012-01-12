@@ -6,34 +6,40 @@
 				;[clojure.test :only (deftest, deftest-, is, testing)]
 				[clojure.stacktrace]))
 
-(declare params-valid?, compute, get-fn, lim-ops-a-r, lim-ops-a-h, lim-ops-b-r, lim-ops-b-h, process-limit, do-if-params-valid)
+(declare params-valid?, throw-illegal-arg, compute, get-fn, lim-ops-a-r, lim-ops-a-h, lim-ops-b-r, lim-ops-b-h, process-limit)
 
 ;;; Public 
 
 (defn w [[alpha beta] x]
 	""
-	(letfn [(func []
-						(* (pow (- 1 x) alpha) (pow (inc x) beta)))]
-		(do-if-params-valid [alpha beta] func)))
+	(if (params-valid? [alpha beta])
+		(* (pow (- 1 x) alpha) (pow (inc x) beta))
+		(throw-illegal-arg)))	
 
 (defn mu-0 [[alpha beta]]
 	""
-	(letfn [(func []
-						(let [fact1 (+ alpha beta 1)
-									fact2-args [(inc alpha) (inc beta) (+ alpha beta 2)]
-									fact2-terms (map log-value fact2-args)
-									fact2 (- (reduce + fact2-terms) (last fact2-terms))]
-							(* (pow 2 fact1) (exp fact2))))]
-		(do-if-params-valid [alpha beta] func)))
+	(if (params-valid? [alpha beta])
+		(let [fact1 (+ alpha beta 1)
+					fact2-args [(inc alpha) (inc beta) (+ alpha beta 2)]
+					fact2-terms (map log-value fact2-args)
+					fact2 (- (reduce + fact2-terms) (last fact2-terms))]
+			(* (pow 2 fact1) (exp fact2)))
+		(throw-illegal-arg)))
 		
 (defn compute-param [param-type ops i]
 	"Computes Jacobi parameter.
 	 param-type identifies the function in the original algorithm, either alpha() or beta()"
-	(letfn [(func []
-					(compute param-type ops i :regular))]
-	(do-if-params-valid ops func)))
+	(if (params-valid? ops)
+		(compute param-type ops i :regular)
+		(throw-illegal-arg)))
 
 ;;; Private
+
+(defn params-valid? [[alpha beta]]
+	(and 	(> alpha -1) (> beta -1)))
+
+(defn throw-illegal-arg []
+	(throw (IllegalArgumentException. "Each parameter must be bigger than -1")))
 
 (defn compute [param-type ops i op-type]
 	(let [compute-fn (get-fn param-type op-type)
@@ -42,7 +48,6 @@
 												:fail 		#(throw (ArithmeticException. "can't compute operand for jacobi integration"))
 												:lhopital #(compute param-type ops i :lhopital)}]
 		((result-handler (process-limit [numer denom] op-type)))))
-
 
 (defn do-if-params-valid [[alpha beta] func]
 	""
@@ -66,7 +71,6 @@
 				factor (+ i i alpha beta)
 				denom (* factor (+ factor 2))]
 		[numer denom]))
-
 
 (defn lim-ops-b-r [[alpha beta] i]
 	"Compute limit operands for regular beta"
