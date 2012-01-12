@@ -9,9 +9,9 @@
 		(is (thrown? ArithmeticException (compute :alpha [1 2] -3/2 :regular)))	
 		(is (= 3/99 (compute :alpha [1 2] 3 :regular))))
 	(testing "Beta" 
-		(is (thrown? ArithmeticException (compute :alpha [0 0] 0 :regular)))	
-		(is (thrown? ArithmeticException (compute :alpha [1 2] -3/2 :regular)))	
-		(is (= 3/99 (compute :alpha [1 2] 3 :regular)))))
+		(is (thrown? ArithmeticException (compute :beta [0 0] 0 :regular)))	
+		(is (thrown? ArithmeticException (compute :beta [1 2] -3/2 :regular)))	
+		(is (= 2/9 (compute :beta [1 2] 3 :regular)))))
 
 (deftest test-do-if-params-valid
 	(letfn [(func []

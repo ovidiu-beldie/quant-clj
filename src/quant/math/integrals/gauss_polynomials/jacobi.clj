@@ -33,6 +33,7 @@
 					(compute param-type ops i :regular))]
 	(do-if-params-valid ops func)))
 
+;;; Private
 
 (defn compute [param-type ops i op-type]
 	(let [compute-fn (get-fn param-type op-type)
@@ -51,7 +52,6 @@
 			(func)
 			(throw (IllegalArgumentException. "Each parameter must be bigger than -1")))))
 
-
 (defn get-fn [param-type op-type]
 	"Returns the compute limit ops fn correspondig to the args"
 	(let [dispatch-map {[:alpha	:regular] 	lim-ops-a-r
@@ -59,7 +59,6 @@
 											[:alpha	:lhopital] 	lim-ops-a-h
 											[:beta	:lhopital] 	lim-ops-b-h }]
 		(dispatch-map (vector param-type op-type))))
-
 
 (defn lim-ops-a-r [[alpha beta] i]
 	"Compute limit operands for regular alpha"
