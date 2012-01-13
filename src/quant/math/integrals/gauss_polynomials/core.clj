@@ -1,11 +1,18 @@
 (ns quant.math.integrals.gauss-polynomials.core
-	(:require [quant.math.integrals.gauss-polynomials.jacobi :as jacobi])
+	;(:require [quant.math.integrals.gauss-polynomials.jacobi :as jacobi])
 	(:use [incanter.core :only (sqrt)]
 				;[clojure.contrib.logging :only (spy)]
 				[clojure.stacktrace]))
 
 (declare get-value-fn, vals-lazy-seq)
 
+(defprotocol GaussOrthoPolyProtocol
+	(compute-alpha [thisi i])
+	(compute-beta [this i])
+	(mu-0 [this])
+	(w [this x]))
+
+(comment
 (defn value [ops n x poly-type]
 	"ops is a vector containing the alpha and beta values"
 	(let [fns {:jacobi jacobi/compute-param}
@@ -37,4 +44,4 @@
 															(* (beta-fn (dec n)) a))]
 								(lazy-seq 
 									(cons newest (values b newest (inc n)))))))]
-		(values))))	
+		(values))))	)
