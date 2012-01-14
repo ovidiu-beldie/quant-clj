@@ -26,10 +26,14 @@
 		(exp (Gamma/logGamma (inc s))))
 
 	(alpha [{:keys [s]} i]
-		(+ i i 1 s))
+		(do
+			(check-if-int i)
+			(+ i i 1 s)))
 
 	(beta [{:keys [s]} i]
-		(* i (+ i s)))
+		(do
+			(check-if-int i)
+			(* i (+ i s))))
 
 	(w [{:keys [s]} x]
 		(* (pow x s) (exp (- x)))))
@@ -43,13 +47,17 @@
 	(mu-0 [{:keys [mu]}]
 		(exp (Gamma/logGamma (+ mu 0.5))))
 
-	(alpha [_ _]
-		0)
+	(alpha [_ i]
+		(do
+			(check-if-int i)
+			0))
 
 	(beta [{:keys [mu]} i]
-		(if (odd? i)
-			(+ (/ i 2) mu)          
-      (/ i 2))) 
+		(do
+			(check-if-int i)
+			(if (odd? (check-if-int i))
+				(+ (/ i 2) mu)          
+  	    (/ i 2))))
 
 	(w [{:keys [mu]} x]
 		(let [fact1 (pow (abs x) (* 2 mu))
@@ -70,10 +78,14 @@
 			(* (pow 2 fact1) (exp fact2))))
 
 	(alpha [{:keys [a b]} i]
-		(alpha-impl a b (check-if-int i)))
+		(do
+			(check-if-int i)
+		(alpha-impl a b i)))
 
 	(beta[{:keys [a b]} i]
-		(beta-impl a b (check-if-int i)))
+		(do
+			(check-if-int i)
+			(beta-impl a b i)))
 
 	(w [{:keys [a b]} x]
 		(* (pow (- 1 x) a) (pow (inc x) b))))
@@ -133,14 +145,18 @@
 	(mu-0 [_]
 		Math/PI)
 
-	(alpha [_ _]
-		0)
+	(alpha [_ i]
+		(do
+			(check-if-int i)
+			0))
 	
 	(beta [_ i]
-		(if (zero? i)
-			Math/PI)
-			(let [half-pi (/ Math/PI 2)]
-				(* half-pi half-pi i i)))
+		(do
+			(check-if-int i)
+			(if (zero? i)
+				Math/PI)
+				(let [half-pi (/ Math/PI 2)]
+					(* half-pi half-pi i i))))
 	
 	(w [_ x]
 		(/ 1 (Math/cosh x))))
@@ -150,17 +166,17 @@
 (defn laguerre [s]
 	(if (> s -1)
 		(GaussLaguerrePolynomial. s)
-		(throw (IllegalArgumentException. "Parameter must be bigger than -1"))))
+		(throw (IllegalArgumentException. "s must be superior to -1"))))
 
 (defn hermite [mu]
 	(if (> mu -0.5)
 		(GaussHermitePolynomial. mu)
-		(throw (IllegalArgumentException. "Parameter must be bigger than -0.5"))))
+		(throw (IllegalArgumentException. "mu must be superior to -0.5"))))
 
-(defn jacobi [alpha beta]
-	(if (and (> alpha -1) (> beta -1))
-		(GaussJacobiPolynomial. alpha beta)
-		(throw (IllegalArgumentException. "Each parameter must be bigger than -1"))))
+(defn jacobi [a b]
+	(if (and (> a -1) (> b -1))
+		(GaussJacobiPolynomial. a b)
+		(throw (IllegalArgumentException. "Both alpha and beta must be superior to -1"))))
 
 (defn legendre []
 	(jacobi 0 0))
