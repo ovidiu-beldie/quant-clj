@@ -23,9 +23,9 @@
 
 (deftest test-alpha-impl
 	(testing "Regular form"
-		(is (= 0 (alpha-impl (jacobi 0 0) 0)) "Can be solved using l'Hopital")
-		(is (= 0 (alpha-impl (jacobi 0 0) 1)))
-		(is (= 3/99 (alpha-impl (jacobi 1 2) 3))))
+		(is (= 0 (alpha-impl 0 0 0)) "Can be solved using l'Hopital")
+		(is (= 0 (alpha-impl 0 0 1)))
+		(is (= 3/99 (alpha-impl 1 2 3))))
 	(testing "L'Hopital form"
 		(is (= 0 (alpha-impl 0 0 0 :lhopital)))
 		(is (= 0 (alpha-impl 0 0 1 :lhopital)))
@@ -33,9 +33,9 @@
 
 (deftest test-beta-impl
 	(testing "Regular form"
-		(is (thrown? ArithmeticException (beta-impl (jacobi 0 0) 0)))
-		(is (= 4/12 (beta-impl (jacobi 0 0) 1)))
-		(is (= 1440/6480 (beta-impl (jacobi 1 2) 3))))
+		(is (thrown? ArithmeticException (beta-impl 0 0 0)))
+		(is (= 4/12 (beta-impl 0 0 1)))
+		(is (= 1440/6480 (beta-impl 1 2 3))))
 	(testing "L'Hopital form"
 		(is (thrown? ArithmeticException (beta-impl 0 0 0 :lhopital)))
 		(is (= 8/12 (beta-impl 0 0 1 :lhopital)))

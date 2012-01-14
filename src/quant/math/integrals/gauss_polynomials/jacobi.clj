@@ -2,9 +2,7 @@
 	(:use [quant.math.integrals.gauss-polynomials.core :only (GaussOrthoPolyProtocol)]
 				[quant.math.distributions.gamma :only (log-value)]
 				[clojure.contrib.generic.math-functions :only (sqr)]
-				;[clojure.contrib.logging :only (spy)]
 				[incanter.core :only (pow, exp)]
-				;[clojure.test :only (deftest, deftest-, is, testing)]
 				[clojure.stacktrace]))
 
 (declare alpha-impl, beta-impl, handle-regular, handle-lhopital)
@@ -16,28 +14,40 @@
 		(GaussJacobiPolynomial. alpha beta)
 		(throw (IllegalArgumentException. "Each parameter must be bigger than -1"))))
 
+(defn legendre []
+	(jacobi 0 0))
+
+(defn chebyshev []
+	(jacobi -0.5 -0.5))
+
+(defn chebyshev2nd []
+	(jacobi 0.5 0.5))
+
+(defn gegenbauer [lambda]
+	(jacobi (- lambda 0.5) (- lambda 0.5)))
+
 (extend-type GaussJacobiPolynomial
 	GaussOrthoPolyProtocol
 
-	(compute-alpha [p i]
-		(alpha-impl p i))
+	(compute-alpha [{:keys [alpha beta]} i]
+		(alpha-impl alpha beta i))
 
-	(compute-beta[p i]
-		(beta-impl p i))
+	(compute-beta[{:keys [alpha beta]} i]
+		(beta-impl alpha beta i))
 
 	(mu-0 [{:keys [alpha beta]}]
 		(let [fact1 (+ alpha beta 1)
 					fact2-args [(inc alpha) (inc beta) (+ alpha beta 2)]
 					fact2-terms (map log-value fact2-args)
-					fact2 (- (reduce + fact2-terms) (last fact2-terms))]
+					fact2 (- (reduce + fact2-terms) (* 2 (last fact2-terms)))]
 			(* (pow 2 fact1) (exp fact2))))
 
-	(w [p x]
-		(* (pow (- 1 x) (p :alpha)) (pow (inc x) (p :beta)))))
+	(w [{:keys [alpha beta]} x]
+		(* (pow (- 1 x) alpha) (pow (inc x) beta))))
 
 
 (defn alpha-impl 
-	([{:keys [alpha beta]} i]
+	([alpha beta i]
 	"Compute limit operands for regular alpha"
 		(let [numer (- (sqr beta) (sqr alpha))
 					factor (+ i i alpha beta)
@@ -51,7 +61,7 @@
 			(handle-lhopital numer denom))))
 		
 (defn beta-impl
-	([{:keys [alpha beta]} i]
+	([alpha beta i]
 	"Compute limit operands for regular beta"
 		(let [numer (* 4 i (+ i alpha) (+ i beta) (+ alpha beta i))  
 					factor (sqr (+ alpha beta i i))
