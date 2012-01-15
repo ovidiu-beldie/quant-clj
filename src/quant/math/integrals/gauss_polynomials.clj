@@ -65,8 +65,10 @@
 	(mu-0 [{:keys [a b]}]
 		(let [fact1 (+ a b 1)
 					fact2-args [(inc a) (inc b) (+ a b 2)]
-					fact2-terms (map (memfn logGamma Gamma) fact2-args)
-					fact2 (- (reduce + fact2-terms) (* 2 (last fact2-terms)))]
+					fact2-terms (map #(Gamma/logGamma %) fact2-args)
+					fact2 (- 
+										(reduce + fact2-terms) 
+										(* 2 (last fact2-terms)))]
 			(* (pow 2 fact1) (exp fact2))))
 
 	(alpha-impl [{:keys [a b]} i]

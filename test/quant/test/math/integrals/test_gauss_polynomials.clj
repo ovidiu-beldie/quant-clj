@@ -1,6 +1,7 @@
 (ns quant.test.math.integrals.test-gauss-polynomials
 	(:use
 		[quant.math.integrals.gauss-polynomials]
+		[clojure.contrib.generic.math-functions :only (approx=)]
 		[clojure.test :only (deftest, deftest, is, testing)]))
 
 ;;; Constructors
@@ -22,6 +23,19 @@
 	(is (thrown-with-msg? IllegalArgumentException #"Both alpha and beta must be superior to -1" (jacobi -1 0)))
 	(is (thrown-with-msg? IllegalArgumentException #"Both alpha and beta must be superior to -1" (jacobi 100 -100)))
 	(is (thrown-with-msg? IllegalArgumentException #"Both alpha and beta must be superior to -1" (jacobi -1 -1))))
+
+;;; mu-0
+(deftest test-mu-0
+	(testing "Laguerre"
+		(is (= 1.7724538509055159 (mu-0 (laguerre -0.5))))
+		(is (= 1.329340388179137 (mu-0 (laguerre 1.5)))))
+	(testing "Hermite"
+		(is (= 2.218159543757688 (mu-0 (hermite -0.1))))
+		(is (= 0.8872638175030753 (mu-0 (hermite 0.9)))))
+	(testing "Jacobi"
+		(is (approx= 1.8603127026985367 (mu-0 (jacobi 0.2 1.4)) 0.001)))
+	(testing "Jacobi"
+		(is (= Math/PI (mu-0 (hyperbolic))))))
 
 ;;; alpha
 
