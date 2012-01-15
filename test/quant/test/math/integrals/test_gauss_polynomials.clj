@@ -62,7 +62,7 @@
 		(is (= 0 (alpha-jacobi 0 0 1 :lhopital)))
 		(is (= 4/20 (alpha-jacobi 1 2 3 :lhopital)))))
 
-;;; Beta
+;;; beta
 
 (deftest test-beta
 	(testing "Non-integer parameter"
@@ -87,3 +87,16 @@
 		(is (thrown-with-msg? ArithmeticException #"can't compute operand for jacobi integration" (beta-jacobi 0 0 0 :lhopital)))
 		(is (= 8/12 (beta-jacobi 0 0 1 :lhopital)))
 		(is (= 600/306 (beta-jacobi 1 2 3 :lhopital)))))
+
+;;; w
+
+(deftest test-w
+	(testing "Laguerrre"
+		(is (= 0.2154202752438425 (w (laguerre 2.9) 7.3))))
+	(testing "Hermite"
+		(is (approx= 4.492182551826063E-37 (w (hermite -0.2) -9.1) 0.001)))
+	(testing "Jacobi"
+		(is (approx= 34.0865045132041 (w (jacobi 0.7 9.9) 0.5) 0.001)))
+	(testing "Hyperbolic"
+		(is (approx= 0.9479158795385038 (w (hyperbolic) 0.33) 0.001))))
+
