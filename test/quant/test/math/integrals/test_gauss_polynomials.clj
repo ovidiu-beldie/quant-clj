@@ -23,8 +23,6 @@
 	(is (thrown-with-msg? IllegalArgumentException #"Both alpha and beta must be superior to -1" (jacobi 100 -100)))
 	(is (thrown-with-msg? IllegalArgumentException #"Both alpha and beta must be superior to -1" (jacobi -1 -1))))
 
-;;; mu-0
-
 ;;; alpha
 
 (deftest test-alpha
@@ -46,9 +44,9 @@
 
 (deftest test-alpha-jacobi-lhopital
 	(testing "L'Hopital form"
-		(is (= 0 (alpha-impl 0 0 0 :lhopital)))
-		(is (= 0 (alpha-impl 0 0 1 :lhopital)))
-		(is (= 4/20 (alpha-impl 1 2 3 :lhopital)))))
+		(is (= 0 (alpha-jacobi 0 0 0 :lhopital)))
+		(is (= 0 (alpha-jacobi 0 0 1 :lhopital)))
+		(is (= 4/20 (alpha-jacobi 1 2 3 :lhopital)))))
 
 ;;; Beta
 
@@ -67,11 +65,11 @@
 	 	(is (= 4 (beta (hermite 1) 8))))
 
 	(testing "Jacobi"
-		(is (thrown? ArithmeticException (beta (jacobi 0 0) 0)))	
+		(is (thrown-with-msg? ArithmeticException #"can't compute operand for jacobi integration" (beta (jacobi 0 0) 0)))	
 		(is (= 2/9 (beta (jacobi 1 2) 3)))))
 
 (deftest test-beta-jacobi-lhopital
 	(testing "L'Hopital form"
-		(is (thrown? ArithmeticException (beta-impl 0 0 0 :lhopital)))
-		(is (= 8/12 (beta-impl 0 0 1 :lhopital)))
-		(is (= 600/306 (beta-impl 1 2 3 :lhopital)))))
+		(is (thrown-with-msg? ArithmeticException #"can't compute operand for jacobi integration" (beta-jacobi 0 0 0 :lhopital)))
+		(is (= 8/12 (beta-jacobi 0 0 1 :lhopital)))
+		(is (= 600/306 (beta-jacobi 1 2 3 :lhopital)))))

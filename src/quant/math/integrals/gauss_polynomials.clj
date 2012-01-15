@@ -5,13 +5,13 @@
 				[incanter.core :only (pow, exp, sqrt, abs)]
 				[clojure.stacktrace]))
 
-(declare alpha-impl, beta-impl, handle-regular, handle-lhopital, check-if-int)
+(declare alpha-impl, alpha-jacobi, beta-impl, beta-jacobi, handle-regular, handle-lhopital, check-if-int)
 
 ;; Protocol implemented by all integral types
 (defprotocol GaussOrthogonalPolynomial
 	(mu-0 [this])
-	(alpha [this i])
-	(beta [this i])
+	(alpha-impl [this i])
+	(beta-impl [this i])
 	(w [this x]))
 
 ;;; Integral types
@@ -25,15 +25,11 @@
 	(mu-0 [{:keys [s]}]
 		(exp (Gamma/logGamma (inc s))))
 
-	(alpha [{:keys [s]} i]
-		(do
-			(check-if-int i)
-			(+ i i 1 s)))
+	(alpha-impl [{:keys [s]} i]
+		(+ i i 1 s))
 
-	(beta [{:keys [s]} i]
-		(do
-			(check-if-int i)
-			(* i (+ i s))))
+	(beta-impl [{:keys [s]} i]
+		(* i (+ i s)))
 
 	(w [{:keys [s]} x]
 		(* (pow x s) (exp (- x)))))
@@ -47,17 +43,13 @@
 	(mu-0 [{:keys [mu]}]
 		(exp (Gamma/logGamma (+ mu 0.5))))
 
-	(alpha [_ i]
-		(do
-			(check-if-int i)
-			0))
+	(alpha-impl [_ i]
+			0)
 
-	(beta [{:keys [mu]} i]
-		(do
-			(check-if-int i)
+	(beta-impl [{:keys [mu]} i]
 			(if (odd? (check-if-int i))
 				(+ (/ i 2) mu)          
-  	    (/ i 2))))
+  	    (/ i 2)))
 
 	(w [{:keys [mu]} x]
 		(let [fact1 (pow (abs x) (* 2 mu))
@@ -77,28 +69,24 @@
 					fact2 (- (reduce + fact2-terms) (* 2 (last fact2-terms)))]
 			(* (pow 2 fact1) (exp fact2))))
 
-	(alpha [{:keys [a b]} i]
-		(do
-			(check-if-int i)
-		(alpha-impl a b i)))
+	(alpha-impl [{:keys [a b]} i]
+		(alpha-jacobi a b i))
 
-	(beta[{:keys [a b]} i]
-		(do
-			(check-if-int i)
-			(beta-impl a b i)))
+	(beta-impl [{:keys [a b]} i]
+			(beta-jacobi a b i))
 
 	(w [{:keys [a b]} x]
 		(* (pow (- 1 x) a) (pow (inc x) b))))
 
 ; Jacobi helper fns
 
-(defn alpha-impl 
+(defn alpha-jacobi 
 	([a b i]
 	"Compute limit operands for regular alpha"
 		(let [numer (- (sqr b) (sqr a))
 					factor (+ i i a b)
 					denom (* factor (+ factor 2))]
-			(handle-regular numer denom a b i alpha-impl)))
+			(handle-regular numer denom a b i alpha-jacobi)))
 
 	([a b i _]
 	"Compute limit operands for l'Hopital alpha"
@@ -106,13 +94,13 @@
         denom (* 2 (+ a b i i 1))]
 			(handle-lhopital numer denom))))
 		
-(defn beta-impl
+(defn beta-jacobi
 	([a b i]
 	"Compute limit operands for regular beta"
 		(let [numer (* 4 i (+ i a) (+ i b) (+ a b i))  
 					factor (sqr (+ a b i i))
 					denom (* factor (- factor 1))]
-			(handle-regular numer denom a b i beta-impl)))
+			(handle-regular numer denom a b i beta-jacobi)))
 
 	([a b i _]
 	"Compute limit operands for l'Hopital beta"	
@@ -145,16 +133,12 @@
 	(mu-0 [_]
 		Math/PI)
 
-	(alpha [_ i]
-		(do
-			(check-if-int i)
-			0))
+	(alpha-impl [_ i]
+		0)
 	
 	(beta [_ i]
-		(do
-			(check-if-int i)
-			(if (zero? i)
-				Math/PI)
+		(if (zero? i)
+				Math/PI
 				(let [half-pi (/ Math/PI 2)]
 					(* half-pi half-pi i i))))
 	
@@ -194,6 +178,16 @@
 	(GaussHyperbolicPolynomial. ))
 
 ;;; The following fns are built on top of the fns implementing the GaussOrthogonalPolynomial protocol. They also take a GaussOrthogonalPolynomial object as first arg
+
+(defn alpha [p i]
+	(do
+		(check-if-int i)
+		(alpha-impl p i)))
+
+(defn beta [p i]
+	(do
+		(check-if-int i)
+		(beta-impl p i)))
 
 (defn value [i n x]
 	(let [e1 1
