@@ -100,3 +100,9 @@
 	(testing "Hyperbolic"
 		(is (approx= 0.9479158795385038 (w (hyperbolic) 0.33) 0.001))))
 
+;;; value 
+(deftest test-value
+	(testing "Laguerre"
+		(is (= -3.3 (value (laguerre 1.3) 2 3.3)))) 
+	(testing "Jacobi"
+		(is (approx= (double 1001/2100) (value (jacobi 1 4) 2 1.1) 0.001)))) 

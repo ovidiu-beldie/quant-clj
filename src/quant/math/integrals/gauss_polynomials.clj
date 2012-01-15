@@ -191,23 +191,22 @@
 		(check-if-int i)
 		(beta-impl p i)))
 
-(defn value [i n x]
+(defn value [p n x]
 	(let [e1 1
-				e2	(- x (alpha i 0))]
+				e2	(- x (alpha p 0))]
 		(letfn [(values
 						;Inspired by 'Programming clojure', Stu Halloway, page 136
 							([]
 								(concat [e1 e2] (values e1 e2 2)))
 							([a b n]
-								(let [ newest (- x 
-																(* (alpha i (dec n)) b) 
-																(* (beta i (dec n)) a))]
+								(let [ newest (- 	(* (- x (alpha p (dec n))) b)
+																	(* (beta p (dec n)) a))]
 									(lazy-seq 
 										(cons newest (values b newest (inc n)))))))]
 		(nth (values) n))))
 
-(defn weighted-val [i n x]
-	(* (sqrt (w i x)) (value i n x)))
+(defn weighted-val [p n x]
+	(* (sqrt (w p x)) (value p n x)))
 
 ; Helper fns
 (defn check-if-int [n]
