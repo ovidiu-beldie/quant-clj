@@ -1,6 +1,7 @@
 (ns quant.test.math.integrals.test-gauss-polynomials
 	(:use
 		[quant.math.integrals.gauss-polynomials]
+		[quant.math.integrals.gauss-polynomials-impl]
 		[clojure.contrib.generic.math-functions :only (approx=)]
 		[clojure.test :only (deftest, deftest, is, testing)]))
 

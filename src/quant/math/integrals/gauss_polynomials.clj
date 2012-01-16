@@ -1,17 +1,14 @@
 (ns quant.math.integrals.gauss-polynomials
 	(:import [cern.jet.stat.tdouble Gamma])
-	(:use	[clojure.contrib.math :only (ceil)]
-				[clojure.contrib.generic.math-functions :only (sqr)]
+	(:use	[quant.math.integrals.gauss-polynomials-impl]
 				[incanter.core :only (pow, exp, sqrt, abs)]
 				[clojure.stacktrace]))
-
-(declare alpha-impl, alpha-jacobi, beta-impl, beta-jacobi, handle-regular, handle-lhopital, check-if-int)
 
 ;; Protocol implemented by all integral types
 (defprotocol GaussOrthogonalPolynomial
 	(mu-0 [this])
-	(alpha-impl [this i])
-	(beta-impl [this i])
+	(alpha [this i])
+	(beta [this i])
 	(w [this x]))
 
 ;;; Integral types
@@ -25,11 +22,11 @@
 	(mu-0 [{:keys [s]}]
 		(exp (Gamma/logGamma (inc s))))
 
-	(alpha-impl [{:keys [s]} i]
-		(+ i i 1 s))
+	(alpha [{:keys [s]} i]
+		(do-if-int i #(+ i i 1 s)))
 
-	(beta-impl [{:keys [s]} i]
-		(* i (+ i s)))
+	(beta [{:keys [s]} i]
+		(do-if-int i #(* i (+ i s))))
 
 	(w [{:keys [s]} x]
 		(* (pow x s) (exp (- x)))))
@@ -43,13 +40,15 @@
 	(mu-0 [{:keys [mu]}]
 		(exp (Gamma/logGamma (+ mu 0.5))))
 
-	(alpha-impl [_ i]
-			0)
+	(alpha [_ i]
+		(do-if-int i #(+ 0)))
 
-	(beta-impl [{:keys [mu]} i]
-			(if (odd? (check-if-int i))
-				(+ (/ i 2) mu)          
-  	    (/ i 2)))
+	(beta [{:keys [mu]} i]
+		(letfn [(func []
+							(if (odd? i)
+								(+ (/ i 2) mu)          
+  	    				(/ i 2)))]
+			(do-if-int i func)))
 
 	(w [{:keys [mu]} x]
 		(let [fact1 (pow (abs x) (* 2 mu))
@@ -71,60 +70,14 @@
 										(* 2 (last fact2-terms)))]
 			(* (pow 2 fact1) (exp fact2))))
 
-	(alpha-impl [{:keys [a b]} i]
-		(alpha-jacobi a b i))
+	(alpha [{:keys [a b]} i]
+		(do-if-int i #(alpha-jacobi a b i)))
 
-	(beta-impl [{:keys [a b]} i]
-			(beta-jacobi a b i))
+	(beta [{:keys [a b]} i]
+		(do-if-int i #(beta-jacobi a b i)))
 
 	(w [{:keys [a b]} x]
 		(* (pow (- 1 x) a) (pow (inc x) b))))
-
-; Jacobi helper fns
-
-(defn alpha-jacobi 
-	([a b i]
-	"Compute limit operands for regular alpha"
-		(let [numer (- (sqr b) (sqr a))
-					factor (+ i i a b)
-					denom (* factor (+ factor 2))]
-			(handle-regular numer denom a b i alpha-jacobi)))
-
-	([a b i _]
-	"Compute limit operands for l'Hopital alpha"
-	  (let [numer (* 2 b)
-        denom (* 2 (+ a b i i 1))]
-			(handle-lhopital numer denom))))
-		
-(defn beta-jacobi
-	([a b i]
-	"Compute limit operands for regular beta"
-		(let [numer (* 4 i (+ i a) (+ i b) (+ a b i))  
-					factor (sqr (+ a b i i))
-					denom (* factor (- factor 1))]
-			(handle-regular numer denom a b i beta-jacobi)))
-
-	([a b i _]
-	"Compute limit operands for l'Hopital beta"	
-		(let [factor (+ i i a a b)
-				numer (* 4 i (+ i b) factor)
-				d (* 2 (+ i i a b))
-				denom (* d (dec d))]
-			(handle-lhopital numer denom))))
-
-(defn handle-regular [numer denom a b i func]
-	""
-	(if (zero? denom)
-				(if (zero? numer)
-					(func a b i :lhopital)
-					(throw (ArithmeticException. "can't compute operand for jacobi integration")))
-				(/ numer denom)))
-
-(defn handle-lhopital [numer denom]
-	""
-	(if (zero? denom)
-				(throw (ArithmeticException. "can't compute operand for jacobi integration"))
-				(/ numer denom)))
 
 ;; Hyperbolic
 (defrecord GaussHyperbolicPolynomial [])
@@ -135,14 +88,16 @@
 	(mu-0 [_]
 		Math/PI)
 
-	(alpha-impl [_ i]
-		0)
+	(alpha [_ i]
+		(do-if-int i #(+ 0)))
 	
 	(beta [_ i]
-		(if (zero? i)
-				Math/PI
-				(let [half-pi (/ Math/PI 2)]
-					(* half-pi half-pi i i))))
+		(letfn [(func []
+							(if (zero? i)
+								Math/PI
+								(let [half-pi (/ Math/PI 2)]
+									(* half-pi half-pi i i))))]
+			(do-if-int i func)))
 	
 	(w [_ x]
 		(/ 1 (Math/cosh x))))
@@ -181,16 +136,6 @@
 
 ;;; The following fns are built on top of the fns implementing the GaussOrthogonalPolynomial protocol. They also take a GaussOrthogonalPolynomial object as first arg
 
-(defn alpha [p i]
-	(do
-		(check-if-int i)
-		(alpha-impl p i)))
-
-(defn beta [p i]
-	(do
-		(check-if-int i)
-		(beta-impl p i)))
-
 (defn value [p n x]
 	(let [e1 1
 				e2	(- x (alpha p 0))]
@@ -207,10 +152,4 @@
 
 (defn weighted-val [p n x]
 	(* (sqrt (w p x)) (value p n x)))
-
-; Helper fns
-(defn check-if-int [n]
-	(if (= n (ceil n))
-		n
-		(throw (IllegalArgumentException. "Parameter must be integer"))))
 
