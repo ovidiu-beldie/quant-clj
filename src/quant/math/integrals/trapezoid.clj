@@ -1,6 +1,13 @@
-(ns quant.math.integrals.trapezoid)
+(ns quant.math.integrals.trapezoid
+	(:use   
+		[quant.math.integrals.core]
+		[incanter.core :only (abs)]
+		[clojure.stacktrace]))
 
-(defstruct int-policy :integrate-fn :nb-evals)
+;(defprotocol Integrable
+;	(integrate [this f a b]))
+
+(defstruct integration-policy :policy-integrate :policy-nb-evals)
 
 (defn default-integrate [f a b I N]
 	(let [dx (/ (- b a) N)
@@ -12,7 +19,7 @@
 					(/ 2))
 				(recur (+ sum (f x)) (+ x dx) (inc i))))))	
 	
-(def default-policy (struct int-policy default-integrate, 2))
+(def default-policy (struct integration-policy default-integrate, 2))
 	
 (defn mid-point-integrate [f a b I N]
 	(let [dx (/ (- b a) N)
@@ -25,4 +32,65 @@
 					(/ 3))
 				(recur (+ sum (f x) (f (+ x D))) (+ x dx) (inc i))))))
 
+;(defstruct integrator :abs-accuracy :max-evals :policy-integrate :nb-evals)
 
+(comment (defn make-integrator [abs-accuracy max-evals ip]
+	(prn (struct integrator abs-accuracy max-evals (ip :integrate-fn) (ip :nb-evals)))
+	(struct integrator abs-accuracy max-evals (ip :integrate-fn) (ip :nb-evals))))
+
+
+(defrecord Trapezoid [in])
+
+(extend-type Trapezoid
+	Integrable
+
+	(integrate [{:keys [in]} f a b]
+		(let [integ (partial (in :policy-integrate) f a b)
+					I-init (* (+ (f a) (f b)) 
+										(- b a) 
+										(/ 1 2)) 
+					done? (fn [I newI i]
+									(and (<= (abs (- I newI)) (in :abs-accuracy))
+												(> i 5)))]
+			(loop [N 1, I (double I-init), i 1]
+				(let [newI (integ I N)
+							_ (prn "I=" I "newI=" newI)]
+					(if (done? I newI i)
+						newI
+						(if (= i (in :max-evals))
+							(throw (Error. "max number of iterations reached"))
+							(recur (* N (in :policy-nb-evals)) newI (inc i))))))))) 
+
+
+(defn trapezoid [abs-accuracy max-evals integ-policy]
+	(let [arg (make-integrator abs-accuracy max-evals)]
+		(Trapezoid. (merge arg integ-policy))))
+
+(defrecord Simpson [in])
+
+(extend-type Simpson
+	Integrable
+
+	(integrate [{:keys [in]} f a b]
+		(let [integ (partial (in :policy-integrate) f a b)
+					I-init (* (+ (f a) (f b)) 
+										(- b a) 
+										(/ 1 2)) 
+					done? (fn [adjI newAdjI i]
+									(and (<= (abs (- adjI newAdjI)) (in :abs-accuracy))
+												(> i 5)))]
+			(loop [N 1, I (double I-init), adjI I-init, i 1]
+				(let [newI (integ I N)
+							newAdjI (-> newI
+												(* 4)
+												(- I)
+												(/ 3))]
+					(if (done? adjI newAdjI i)
+						newAdjI
+						(if (= i (in :max-evals))
+							(throw (Error. "max number of iterations reached"))
+							(recur (* N 2) newI newAdjI (inc i)))))))))
+
+(defn simpson [abs-accuracy max-evals]
+	(let [arg (make-integrator abs-accuracy max-evals)]
+		(Trapezoid. (merge arg default-policy))))
