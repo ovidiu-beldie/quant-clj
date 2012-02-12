@@ -1,8 +1,7 @@
 (ns quant.math.integrals.gauss-polynomials-impl
 	(:import [cern.jet.stat.tdouble Gamma])
 	(:use	[clojure.contrib.math :only (ceil)]
-				[clojure.contrib.generic.math-functions :only (sqr)]
-				[clojure.stacktrace]))
+				[clojure.contrib.generic.math-functions :only (sqr)]))
 
 (declare handle-regular,handle-lhopital) 
 

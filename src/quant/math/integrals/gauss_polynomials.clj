@@ -1,8 +1,7 @@
 (ns quant.math.integrals.gauss-polynomials
 	(:import [cern.jet.stat.tdouble Gamma])
 	(:use	[quant.math.integrals.gauss-polynomials-impl]
-				[incanter.core :only (pow, exp, sqrt, abs)]
-				[clojure.stacktrace]))
+				[incanter.core :only (pow, exp, sqrt, abs)]))
 
 ;; Protocol implemented by all integral types
 (defprotocol GaussOrthogonalPolynomial
