@@ -1,8 +1,7 @@
 (ns quant.math.integrals.trapezoid
 	(:use   
 		[quant.math.integrals.core]
-		[incanter.core :only (abs)]
-		[clojure.stacktrace]))
+		[incanter.core :only (abs)]))
 
 (defstruct integration-policy :policy-integrate :policy-nb-evals)
 
@@ -46,8 +45,7 @@
 	(integrate [{:keys [in]} f a b]
 		(let [integ (partial (in :policy-integrate) f a b)]
 			(loop [N 1, I (init-i f a b), i 1]
-				(let [newI (integ I N)
-							_ (prn "I=" I "newI=" newI)]
+				(let [newI (integ I N)]
 					(if (done? I newI (in :abs-accuracy) i)
 						newI
 						(if (= i (in :max-evals))
