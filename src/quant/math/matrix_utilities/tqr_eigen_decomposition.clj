@@ -27,7 +27,8 @@
         ev1 (assoc-column ev col-i-1 (dec i))]
     (assoc-column ev1 col-i i)))
 
-(defn qr-transf-iter [e ev sine cosine d u q i l]
+;(defn qr-transf-iter [e ev sine cosine d u q i l]
+(defn qr-transf-iter [{:keys [e ev sine cosine d u q i l]}]
   (let [dec-i (dec i)
         h (* cosine (e i))
         p (* sine (e i))
@@ -44,20 +45,22 @@
             d1 (assoc d dec-i (+ g u1))
             q1 (- (* cosine t) h)
             ev1 (update-ev ev i sine cosine)]
-        {:recov-underflow false, :sine sine, :cosine cosine, :d d1, :u u1, :e e1, :ev ev1 :q q1})
+        {:recov-underflow false, :sine sine, :cosine cosine, :d d1, :u u1, :e e1, :ev ev1 :q q1, :l l})
       (let [d1 (assoc d (dec i) (- u))
             e1 (assoc e l 0)]
         ;don't need the other params because will exit the loop
         {:recov-underflow true, :d d1, :e e1}))))
 
 
-(defn qr-transform [d-p, ev-p, e-p, k l q-p]
-  (loop [i (inc l), ev ev-p, e e-p, d d-p, sine 1, cosine 1, u 0, q q-p, recov-underflow false]
-    (let [res (qr-transf-iter e ev sine cosine d u q i l)]
+(defn qr-transform [eigen, e-init, k l q-init]
+  (loop [i (inc l), arg (assoc eigen :e e-init, :sine 1, :cosine 1, :u 0, :q q-init, :recov-underflow false, :l l)]
+    ;(let [res (qr-transf-iter e ev sine cosine d u q i l)]
+    (let [res (qr-transf-iter arg)]
       (if (or (> i k) (res :recover-underflow))
         (dissoc res :sine :cosine :u)
-        (recur (inc i), (res :ev), (res :e), (res :d), (res :sine), 
-              (res :cosine), (res :u), (res :q), (res :recov-underflow))))))
+        (recur (inc i), res)))))
+        ;(recur (inc i), (res :ev), (res :e), (res :d), (res :sine), 
+        ;      (res :cosine), (res :u), (res :q), (res :recov-underflow))))))
         
 (defn comp-q [d e k l n strat]
   (let [q (d l)]
@@ -81,8 +84,8 @@
   (=  (+ (abs (d (dec k))) (abs (d k)))
       (+ (abs (d (dec k))) (abs (d k)) (abs (e k)))))
 
-(defn eigen-decomp-iter [k, n, iter-p, e-p, ev-p, d-p, strat]
-  (loop [iter iter-p, d d-p, e e-p, ev ev-p]
+(defn eigen-decomp-iter [eigen, k, n, e-init, strat]
+  (loop [iter (eigen :iter), d (eigen :d), ev (eigen :ev), e e-init]
     (if (off-diag-zero? k d e)
       {:iter iter, :d d, :e e, :ev ev}
       (let [comp-l (fn [k e]
@@ -103,7 +106,7 @@
          (recur (inc iter) d1 e1 (qr-tr :ev))))))    
       
   
-(defn sort-eigens [ev d]
+(defn sort-eigens [{:keys [ev d]}]
   (let [pairs (map vector d ev) 
         sorted-pairs (sort pairs)
         _ (prn "pairs=" pairs "sorted-pairs=" sorted-pairs)
@@ -131,19 +134,11 @@
     (let [n (count diag)
           ev-init (make-ev diag strat)
           e-init (conj sub 0)
-          loop-res  (loop [k (dec (count diag)), d diag, iter 0, ev ev-init, e e-init]
+          loop-res  (loop [k (dec (count diag)), arg {:ev ev-init, :d diag, :iter 0, :e e-init, :strat strat, :n n}]
+                            ;eigen {:ev ev-init, :d diag, :iter 0}, k (dec (count diag)), e e-init]
                       (if (= k 1)
-                        {:iter iter, :d d, :ev ev}
-                        (let [res (eigen-decomp-iter k, n, iter, e, ev, d, strat)]
-                          (recur (dec k) (res :d) (res :iter) (res :ev) (res :e)))))]
-      (assoc (sort-eigens (loop-res :ev) (loop-res :d)) :iter (loop-res :iter)))))
+                        (dissoc arg :e :strat :n)
+                        (recur (dec k) (eigen-decomp-iter arg))))]
+      (assoc (sort-eigens loop-res) :iter (loop-res :iter)))))
   
-
-
-
-;(defn eigen-decomp-loop [n e ev d]
-;  (loop [k (dec n)]
-;    (if (< k 1)
-;      {:d d, :ev ev}))))
-
 

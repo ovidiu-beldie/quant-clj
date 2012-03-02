@@ -25,8 +25,7 @@
 (deftest test-update-ev
   (is (= ev-result (update-ev ev 2 0.5 1))))
 
-  
-(def qr-transf-iter-1 (qr-transf-iter e2 ev 0.05 0.025 d 0 3 2 1))
+(def qr-transf-iter-1 (qr-transf-iter {:e e2, :ev ev, :sine 0.05, :cosine 0.025, :d d, :u 0, :q 3, :i 2, :l 1}))
 (def e2-qr-1 [0 3.1622776601683795 20 30 40 50 60 70 80])
 (def d-qr-1 [7 2.1 0 6 1 9 3 8 5])
 
@@ -40,7 +39,7 @@
   (is (approx= -0.2 (:q qr-transf-iter-1) 0.0001)))
 
 
-(def qr-transf-iter-2 (qr-transf-iter e1 ev 0.05 0.025 d 9 0 2 1))
+(def qr-transf-iter-2 (qr-transf-iter {:e e1, :ev ev, :sine 0.05, :cosine 0.025, :d d, :u 9, :q 0, :i 2, :l 1}))
 (def d-qr-2 [7 -9 0 6 1 9 3 8 5])
 (deftest test-qr-transf-iter-2
   (is (= true (:recov-underflow qr-transf-iter-2)))
@@ -51,7 +50,7 @@
 (def d-sort-expect '(1 2 3 4))
 (def ev-sort-eigens [[-1 2 3 -4] [5 -6 7 8] [9 10 -11 -12] [-13 -14 15 16]])
 (def res-ev-sort-eigens [[9 10 -11 -12] [1 -2 -3 4] [13 14 -15 -16] [5 -6 7 8]])
-(def call-sort-eigens (sort-eigens ev-sort-eigens d-sort))
+(def call-sort-eigens (sort-eigens {:ev ev-sort-eigens, :d d-sort}))
 (deftest test-sort-eigens
   (is (= d-sort-expect (:d call-sort-eigens)))
   (is (= res-ev-sort-eigens (:ev call-sort-eigens))))
