@@ -46,3 +46,12 @@
   (is (= true (:recov-underflow qr-transf-iter-2)))
   (is (= d-qr-2 (:d qr-transf-iter-2)))
   (is (= e1 (:e qr-transf-iter-2))))
+
+(def d-sort [2 4 1 3])
+(def d-sort-expect '(1 2 3 4))
+(def ev-sort-eigens [[-1 2 3 -4] [5 -6 7 8] [9 10 -11 -12] [-13 -14 15 16]])
+(def res-ev-sort-eigens [[9 10 -11 -12] [1 -2 -3 4] [13 14 -15 -16] [5 -6 7 8]])
+(def call-sort-eigens (sort-eigens ev-sort-eigens d-sort))
+(deftest test-sort-eigens
+  (is (= d-sort-expect (:d call-sort-eigens)))
+  (is (= res-ev-sort-eigens (:ev call-sort-eigens))))

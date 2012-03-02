@@ -1,9 +1,12 @@
 (ns quant.math.matrix-utilities.tqr-eigen-decomposition
   (:use [quant.math.matrix :only (column assoc-column)]
-        [incanter.core :only (sqrt abs)]))
+        [incanter.core :only (sqrt abs)]
+        [quant.math.matrix :only (matrix, set-main-diag)]))
 
 (def eigen-vector-calculation #{:with-eigen-vector :without-eigen-vector :only-first-row-eigen-vector})
 (def shift-strategy #{:no-shift :over-relaxation :close-eigen-value})
+
+(defstruct eigen-decomp :d :ev :iter)
 
 (defn sqr [x] (* x x))
 
@@ -48,12 +51,9 @@
         {:recov-underflow true, :d d1, :e e1}))))
 
 
-(defn qr-transform [d ev e k l q]
-  (loop [i (inc l), ev1 ev, e1 e, d1 d, sine 1, cosine 1, u 0, q1 q, recov-underflow false]
-    (let [h (* cosine (e i))
-          p (* sine (e i))
-          e2 (assoc e1 (dec i) (sqrt (+ (sqr p) (sqr q1))))
-          res (qr-transf-iter e2 ev1 h p d1 u q1 i)]
+(defn qr-transform [d-p, ev-p, e-p, k l q-p]
+  (loop [i (inc l), ev ev-p, e e-p, d d-p, sine 1, cosine 1, u 0, q q-p, recov-underflow false]
+    (let [res (qr-transf-iter e ev sine cosine d u q i l)]
       (if (or (> i k) (res :recover-underflow))
         (dissoc res :sine :cosine :u)
         (recur (inc i), (res :ev), (res :e), (res :d), (res :sine), 
@@ -76,11 +76,12 @@
             (- q (* 1 lambda)))))
       q)))
 
+;this should be fixed
 (defn off-diag-zero? [k d e]
   (=  (+ (abs (d (dec k))) (abs (d k)))
       (+ (abs (d (dec k))) (abs (d k)) (abs (e k)))))
 
-(defn eigen-decomp-iter [k n iter-p e-p ev-p d-p strat]
+(defn eigen-decomp-iter [k, n, iter-p, e-p, ev-p, d-p, strat]
   (loop [iter iter-p, d d-p, e e-p, ev ev-p]
     (if (off-diag-zero? k d e)
       {:iter iter, :d d, :e e, :ev ev}
@@ -100,7 +101,46 @@
                  (assoc (qr-tr :e) k q, l 0)
                  (qr-tr :e))]
          (recur (inc iter) d1 e1 (qr-tr :ev))))))    
-        
+      
+  
+(defn sort-eigens [ev d]
+  (let [pairs (map vector d ev) 
+        sorted-pairs (sort pairs)
+        _ (prn "pairs=" pairs "sorted-pairs=" sorted-pairs)
+        d1 (map first sorted-pairs)
+        sign (fn [x] (if (< x 0) -1 1))
+        mult-sign-of-first (fn [coll]
+                          (let [s (sign (first coll))]
+                            (map #(* s %) coll)))
+        sorted-ev (map second sorted-pairs)]
+    { :d (map first sorted-pairs) 
+      :ev (map mult-sign-of-first sorted-ev)}))
+
+(defn make-ev [d strat]
+  (let [nb-rows-map {:with-eigen-vector (count d), :without-eigen-vector 0, :only-first-row-eigen-vector 1}
+        nb-rows (nb-rows-map strat)]
+    (if (zero? nb-rows)
+      0
+      (let [m (matrix nb-rows (count d) (repeat 0))]
+        (set-main-diag m (repeat 1))))))
+       
+
+(defn tqr-eigen-decomposition [diag sub calc strat]
+  (if (not (= (count diag) (inc (count sub))))
+    (throw (IllegalArgumentException. "Wrong dimensions"))
+    (let [n (count diag)
+          ev-init (make-ev diag strat)
+          e-init (conj sub 0)
+          loop-res  (loop [k (dec (count diag)), d diag, iter 0, ev ev-init, e e-init]
+                      (if (= k 1)
+                        {:iter iter, :d d, :ev ev}
+                        (let [res (eigen-decomp-iter k, n, iter, e, ev, d, strat)]
+                          (recur (dec k) (res :d) (res :iter) (res :ev) (res :e)))))]
+      (assoc (sort-eigens (loop-res :ev) (loop-res :d)) :iter (loop-res :iter)))))
+  
+
+
+
 ;(defn eigen-decomp-loop [n e ev d]
 ;  (loop [k (dec n)]
 ;    (if (< k 1)
