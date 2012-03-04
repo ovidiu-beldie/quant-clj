@@ -4,7 +4,7 @@
   "Creates a matrix with the number of rows
     and columns equal to the first 2 params 
     and with values provided by the last param"
-  (partition cols (take (* rows cols) vals)))
+  (vec (map vec (partition cols (take (* rows cols) vals)))))
 
 (defn column [m j]
   "Return colum j of matrix m"
@@ -22,5 +22,5 @@
 (defn set-main-diag [m vals]
   "Sets the main diagonal of the matrix m
     with the values from vals"
-    (map assoc-elem m vals (range)))
+  (map assoc-elem m vals (range)))
 
