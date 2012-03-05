@@ -24,3 +24,9 @@
     with the values from vals"
   (map assoc-elem m vals (range)))
 
+(defn transpose [m]
+  "Transposes matrix m"
+  (loop [new-m [], old-m m]
+    (if (empty? (first old-m))
+      new-m
+      (recur (conj new-m (vec (map first old-m))), (map rest old-m)))))

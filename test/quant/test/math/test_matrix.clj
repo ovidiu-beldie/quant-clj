@@ -22,3 +22,9 @@
 
 (deftest test-set-main-diag
   (is (= m3 (set-main-diag m (range 100 200)))))
+
+(def transp-m  [[1 4 7] [2 5 8] [3 6 9]])
+(def transp-m2 [[1 6 11] [2 7 12] [3 8 13] [4 9 14] [5 10 15]])
+(deftest test-transpose 
+  (is (= transp-m (transpose m)))
+  (is (= transp-m2 (transpose m2))))
