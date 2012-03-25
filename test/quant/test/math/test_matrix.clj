@@ -30,6 +30,10 @@
 (deftest test-assoc-column
   (is (= m1 (assoc-column m [11 41 71] 0))))
 
+(deftest test-get-main-diag
+  (is (= '(1 5 9) (get-main-diag m)))
+  (is (= '(100 101 102) (get-main-diag m3))))
+
 (deftest test-set-main-diag
   (is (= m3 (set-main-diag m (range 100 200)))))
 
