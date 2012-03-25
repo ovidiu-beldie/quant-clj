@@ -9,8 +9,7 @@
 
 (deftest test-symmetric-schur-decomp
   (is (thrown? IllegalArgumentException (symmetric-schur-decomp null-matrix)))
-  (is (thrown? IllegalArgumentException (symmetric-schur-decomp rectang-matrix)))
-  (is (thrown? IllegalArgumentException (symmetric-schur-decomp square-matrix))))
+  (is (thrown? IllegalArgumentException (symmetric-schur-decomp rectang-matrix))))
 
 (def m1 [[1 2] [3 4]])
 (def m2 [[1 2 3] [4 5 6] [7 8 9]])
