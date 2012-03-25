@@ -20,19 +20,18 @@
   "Return colum j of matrix m"
   (map #(nth % j) m))
 
-(defn assoc-elem [row elem i]
-  "Returns row with elem replacing
-    the element at index i"
-  (assoc row i elem))
-
 (defn assoc-column [m col j]
   "Return the matrix m with column col at index j"
-    (map assoc-elem m col (repeat j)))
+    (map assoc m (repeat j) col))
+
+(defn get-main-diag [m]
+  "Returns the main diagonal of matrix m"
+  (map nth m (range)))
 
 (defn set-main-diag [m vals]
   "Sets the main diagonal of the matrix m
     with the values from vals"
-  (map assoc-elem m vals (range)))
+  (vec (map assoc m (range) vals)))
 
 (defn transpose [m]
   "Transposes matrix m"
