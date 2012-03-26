@@ -54,3 +54,40 @@
   (is (= 3 (count-cols m)))
   (is (= 2 (count-cols count-m1)))
   (is (= 4 (count-cols count-m2))))
+
+(deftest test-matrix?
+  (is (true? (matrix? m)))
+  (is (false? (matrix? ['(1 2 3) '(4 5 6) '(7 8 9)])))
+  (is (false? (matrix? (list [1 2 3] [4 5 6] [7 8 9]))))
+  (is (false? (matrix? [1 2 3 4])))
+  (is (false? (matrix? 4))))
+
+(def mx2  [[2 4 6] [8 10 12] [14 16 18]])
+(def mm1 (matrix 3 4 (range 1 13)))
+(def mm2 (matrix 4 2 (range 9 1 -1)))
+(def a1 [3 9])
+(def a2 [1 7 4])
+(def a3 [6 8 5 0])
+
+(def mm1xmm2 [[50 40] [146 120] [242 200]])
+
+(deftest test-multiply
+  (testing "Scalar"
+    (is (= mx2 (multiply m 2)))
+    (is (= mx2 (multiply 2 m))))
+  (testing "Matrices"
+    (is (= mm1xmm2 (multiply mm1 mm2)))
+    (is (thrown? IllegalArgumentException (multiply mm2 mm1))))
+  (testing "Vectors"
+    (is (thrown? IllegalArgumentException (multiply mm1 a1)))
+    (is (thrown? IllegalArgumentException (multiply mm1 a2)))
+    (is (= [37 113 189] (multiply mm1 a3)))
+    (is (= [99 75 51 27] (multiply mm2 a1)))
+    (is (thrown? IllegalArgumentException (multiply mm2 a2)))
+    (is (thrown? IllegalArgumentException (multiply mm2 a3)))
+    (is (thrown? IllegalArgumentException (multiply a1 mm1)))
+    (is (= [72 84 96 108] (multiply a2 mm1)))
+    (is (thrown? IllegalArgumentException (multiply a3 mm1)))
+    (is (thrown? IllegalArgumentException (multiply a1 mm2)))
+    (is (thrown? IllegalArgumentException (multiply a2 mm2)))
+    (is (= [135 116] (multiply a3 mm2)))))

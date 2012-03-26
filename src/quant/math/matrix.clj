@@ -45,3 +45,50 @@
 
 (defn count-cols [m]
   (count (first m)))
+
+(defn matrix? [m]
+  (if (vector? m)
+    (vector? (first m))
+    false))
+
+(defn inner-prod [v1 v2]
+  (reduce + (map * v1 v2)))
+
+(defn multiply-matrices [x y]
+  (if (not (= (count-cols x) (count-rows y)))
+    (throw (IllegalArgumentException. "Matrices with different sizes cannot be multiplied"))
+    (let [v (for [i x, j (transpose y)] (inner-prod i j))]
+      (matrix (count-rows x) (count-cols y) v))))
+
+(defn multiply-scalar [x y]
+  (let [_ (prn "multiply-scalar: x=" x "y=" y)
+        m (if (coll? x) x y)
+        s (if (coll? x) y x)
+        mul-row (fn [r]
+                  (vec (map #(* s %) r)))]
+    (vec (map mul-row m))))
+  
+(defn multiply-vector [x y]
+  (let [_ (prn "multiply-vector: x=" x "y=" y)
+        m (if (matrix? x) x (transpose y))
+        v (if (matrix? x) y x)]
+    (if (not (= (count v) (count-cols m)))
+      (throw (IllegalArgumentException. "Cannot multiply matrix and vector with different sizes"))
+      (vec (map (partial inner-prod v) m)))))
+
+(defn multiply-2 [x y]
+  (let [_ (prn "multiply-2: x=" x "y=" y)
+        l (list x y)
+        matrices (map matrix? l)
+        collections (map coll? l)]
+    (if (not-any? true? matrices)
+      (throw (IllegalArgumentException. "At least one operand must be a matrix"))
+      (if (every? true? matrices)
+        (multiply-matrices x y)
+        (if (not-every? true? collections)
+          (multiply-scalar x y)
+          (multiply-vector x y))))))
+                              
+(defn multiply [x y & others]
+  (let [operands (conj others y x)]
+    (reduce multiply-2 operands))) 
