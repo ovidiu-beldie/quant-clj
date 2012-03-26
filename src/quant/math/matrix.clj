@@ -47,6 +47,8 @@
   (count (first m)))
 
 (defn matrix? [m]
+  "Tests if m is a matrix
+   (a vector of vectors)"
   (if (vector? m)
     (vector? (first m))
     false))
@@ -61,24 +63,21 @@
       (matrix (count-rows x) (count-cols y) v))))
 
 (defn multiply-scalar [x y]
-  (let [_ (prn "multiply-scalar: x=" x "y=" y)
-        m (if (coll? x) x y)
+  (let [m (if (coll? x) x y)
         s (if (coll? x) y x)
         mul-row (fn [r]
                   (vec (map #(* s %) r)))]
     (vec (map mul-row m))))
   
 (defn multiply-vector [x y]
-  (let [_ (prn "multiply-vector: x=" x "y=" y)
-        m (if (matrix? x) x (transpose y))
+  (let [m (if (matrix? x) x (transpose y))
         v (if (matrix? x) y x)]
     (if (not (= (count v) (count-cols m)))
       (throw (IllegalArgumentException. "Cannot multiply matrix and vector with different sizes"))
       (vec (map (partial inner-prod v) m)))))
 
 (defn multiply-2 [x y]
-  (let [_ (prn "multiply-2: x=" x "y=" y)
-        l (list x y)
+  (let [l (list x y)
         matrices (map matrix? l)
         collections (map coll? l)]
     (if (not-any? true? matrices)
@@ -90,5 +89,10 @@
           (multiply-vector x y))))))
                               
 (defn multiply [x y & others]
+  "Multiplies a matrix with other matrices,
+   with vectors or with scalars. The (only) 
+   multiplication with a vecor must be the 
+   last operation as it yields a vector which 
+   cannot by multiplied any more"
   (let [operands (conj others y x)]
     (reduce multiply-2 operands))) 

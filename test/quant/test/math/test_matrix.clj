@@ -90,4 +90,5 @@
     (is (thrown? IllegalArgumentException (multiply a3 mm1)))
     (is (thrown? IllegalArgumentException (multiply a1 mm2)))
     (is (thrown? IllegalArgumentException (multiply a2 mm2)))
-    (is (= [135 116] (multiply a3 mm2)))))
+    (is (= [135 116] (multiply a3 mm2)))
+    (is (= [510 1518 2526] (multiply mm1 mm2 a1)))))
