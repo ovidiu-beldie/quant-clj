@@ -90,9 +90,7 @@
                               
 (defn multiply [x y & others]
   "Multiplies a matrix with other matrices,
-   with vectors or with scalars. The (only) 
-   multiplication with a vecor must be the 
-   last operation as it yields a vector which 
-   cannot by multiplied any more"
+   with vectors or with scalars. At each step, 
+   at least one of the operands must be a matrix"
   (let [operands (conj others y x)]
     (reduce multiply-2 operands))) 
