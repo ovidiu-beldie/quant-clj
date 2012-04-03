@@ -21,7 +21,7 @@
                 (if (and (= (month d) 2) (> (day d) 27))
                   (reify Date
                     (day [this] 30)
-                    (month [this] (month d))
+                    (month [this] 2)
                     (year [this] (year d)))
                   d))
         it  (fn [] [(it-1 d1) (it-1 d2)])
