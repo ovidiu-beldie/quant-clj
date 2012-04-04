@@ -29,3 +29,18 @@
 
 (defn new-date [day month year]
   (GregorianCalendar. year (dec month) day))
+
+(defn leap-year [date]
+  (zero? (rem (year date) 4)))
+
+(defn end-of-month? [date]
+  (let [month-length {1 31, 3 31, 4 30, 5 31, 6 30,
+          7 31, 8 31, 9 30, 10 31, 11 30, 12 31}
+        m (month date)
+        d (day date)]
+    (if (= m 2)
+        (if (leap-year date)
+          (= d 29)
+          (= d 28))
+        (= d (month-length m)))))
+
