@@ -7,9 +7,49 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.time.daycounters.thirty360
-  (:use [quant.time.date :only (day month year new-date Date)]))
+  (:use
+    [quant.time.date :only (day month year new-date Date)]
+    [quant.time.daycounter]))
+
+(declare adjust-dates)
 
 (def conv-map {:usa :us, :bond-basis :us, :european :eu, :eurobond-basis :eu, :italian :it})
+
+(def name-us "30/360 (Bond Basis)")
+(def name-eu "30E/360 (Eurobond Basis)")
+(def name-it "30/360 30/360 (Italian)")
+
+(def name-map {:usa name-us, :bond-basis name-us, :european name-eu, :eurobond-basis name-eu, :italian name-it})
+
+(defrecord Thirty360 [the-name convention])
+
+(extend-protocol Daycounter
+  Thirty360
+
+  (get-name [this]
+    (:the-name this))
+
+  (day-count [this date1 date2]
+    (let [[d1 d2] (adjust-dates date1 date2 (:convention this))
+          y (* 360 (- (year d2) (year d1)))
+          m (* 30 (- (month d2) (month d1) 1))
+          day1 (max 0 (- 30 (day d1)))
+          day2 (min 30 (day d2))]
+      (+ y m day1 day2)))
+
+  (year-fraction [this d1 d2 _ _]
+    (/ (day-count this d1 d2) 360)))
+
+
+(defn new-thirty360
+  ([]
+    (new-thirty360 :bond-basis))
+  ([convention]
+    (let [the-name (name-map convention)
+          conv (conv-map convention)]
+      (if (nil? conv)
+        (throw (IllegalArgumentException. "Unknown 30/360 convention"))
+        (Thirty360. the-name conv)))))
 
 (defn adjust-dates [d1 d2 conv]
   (let [us  (fn []
@@ -28,14 +68,3 @@
         conv-map {:us us, :eu eu, :it it}
         func (conv-map conv)]
     ((conv-map conv))))
-
-(defn day-count [date1 date2 convention]
-  (let [[d1 d2] (adjust-dates date1 date2 (conv-map convention))
-        y (* 360 (- (year d2) (year d1)))
-        m (* 30 (- (month d2) (month d1) 1))
-        day1 (max 0 (- 30 (day d1)))
-        day2 (min 30 (day d2))]
-    (+ y m day1 day2)))
-
-        
-    
