@@ -20,15 +20,22 @@
   
   (day [this]
     (.get this Calendar/DAY_OF_MONTH))
-
   (month [this]
     (inc (.get this Calendar/MONTH)))
-
   (year [this]
     (.get this Calendar/YEAR)))
 
-(defn new-date [day month year]
-  (GregorianCalendar. year (dec month) day))
+(defn new-date
+  ([]
+    "Returns current day"
+    (GregorianCalendar.))
+  ([day-of-year year]
+    (let [date (GregorianCalendar.)]
+      (doto date
+        (.set Calendar/DAY_OF_YEAR day-of-year)
+        (.set Calendar/YEAR year))))
+  ([day month year]
+    (GregorianCalendar. year (dec month) day)))
 
 (defn leap-year [date]
   (zero? (rem (year date) 4)))
@@ -43,4 +50,7 @@
           (= d 29)
           (= d 28))
         (= d (month-length m)))))
+
+(defn next-day [date]
+  (GregorianCalendar. (year date) (dec (month date)) (inc (day date))))
 
