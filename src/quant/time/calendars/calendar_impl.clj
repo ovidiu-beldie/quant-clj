@@ -7,11 +7,22 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.time.calendars.calendar-impl
-  (:use [quant.time.date :only (new-date day month year next-day)]
-        [quant.time.calendar :only (calendar)])
+  (:use [quant.time.date :only (new-date day month year next-day)])
   (:import [java.util GregorianCalendar Calendar]))
 
-(declare catholic-easter-mondays, orthodox-easter-mondays)
+(declare catholic-easter-mondays, orthodox-easter-mondays, default-weekend-fn)
+
+(defstruct calendar :name :fn-business-day? :fn-weekend-day? :added-holidays :removed-holidays)
+
+(defn calendar-selector [country market]
+  "Selector fn for new-calendar multimethod"
+  (list country market))
+
+(defmulti new-calendar-impl calendar-selector)
+
+(defmethod new-calendar-impl :default [country market]
+  (throw (IllegalArgumentException. "Unknown country or market")))
+
 
 (def calendar-map {:catholic catholic-easter-mondays, :orthodox orthodox-easter-mondays})
 
@@ -20,44 +31,37 @@
 
 ;;; Common Holidays
 
-(defn new-years-day       [_  year] (new-date 1 1 year))
-(defn good-friday         [em year] (new-date (- em 3) year))
-(defn easter-monday       [em year] (new-date em year))
-(defn ascension-thursday  [em year] (new-date (+ em 38) year))
-(defn whit-monday         [em year] (new-date (+ em 49) year))
-(defn corpus-christi      [em year] (new-date (+ em 59) year))
-(defn labour-day          [_  year] (new-date 1 5 year))
-(defn christmas-eve       [_  year] (new-date 24 12 year))
-(defn christmas           [_  year] (new-date 25 12 year))
-(defn boxing-day          [_  year] (new-date 26 12 year))
-(defn new-years-eve       [_  year] (new-date 31 12 year))
-
-(defn default-weekend-fn [date]
-  (let [day-of-week (.get date Calendar/DAY_OF_WEEK)
-        weekend-days #{Calendar/SATURDAY Calendar/SUNDAY}
-        weekend-day (weekend-days day-of-week)]
-    (not (nil? weekend-day))))
+(defn new-years-day       [_  year] [(new-date 1 1 year)])
+(defn good-friday         [em year] [(new-date (- em 3) year)])
+(defn easter-monday       [em year] [(new-date em year)])
+(defn ascension-thursday  [em year] [(new-date (+ em 38) year)])
+(defn whit-monday         [em year] [(new-date (+ em 49) year)])
+(defn corpus-christi      [em year] [(new-date (+ em 59) year)])
+(defn labour-day          [_  year] [(new-date 1 5 year)])
+(defn christmas-eve       [_  year] [(new-date 24 12 year)])
+(defn christmas           [_  year] [(new-date 25 12 year)])
+(defn boxing-day          [_  year] [(new-date 26 12 year)])
+(defn new-years-eve       [_  year] [(new-date 31 12 year)])
 
 (defn compare-day-and-month [d1 d2]
   "Compares two dates without considering the values of the years"
-  (do
-  (prn "day d1=" (day d1) "day d2=" (day d2))
-  (and (= (day d1) (day d2)) (= (month d1) (month d2)))))
+  (and (= (day d1) (day d2)) (= (month d1) (month d2))))
 
-(defn date-in-set? [set-of-dates date compare-fn]
+(defn date-in-set? [vec-of-set-of-dates date compare-fn]
   "Searches a date in a set of dates using the provided
    comparaison function to test for equality"
-  (do
-  ;(prn "set-of-dates=" (map #(day %) set-of-dates))
-  (some true? (map #(compare-fn date %) set-of-dates))))
+  (let [compare-dates (fn[set-of-dates] (some true? (map #(compare-fn date %) set-of-dates)))]
+    (some true? (map compare-dates vec-of-set-of-dates))))
+
+(defn make-holiday-list [holiday-fns easter-table the-year]
+  (let [easter-monday (easter-table (- the-year 1901))]
+    (map #(% easter-monday the-year) holiday-fns)))
+
+(def make-holiday-list-memo (memoize make-holiday-list))
 
 (defn make-christian-business-day-fn [holiday-fns easter-table]
   (fn [date]
-    (let [easter-monday (easter-table (- (year date) 1901))
-          ;_ (prn "make-christian-business-day-fn: holiday-fns=" holiday-fns)
-          holidays (map #(% easter-monday (year date)) holiday-fns)
-          ;_ (prn "make-christian-business-day-fn: holidays=" holidays)
-          ]
+    (let [holidays (make-holiday-list-memo holiday-fns easter-table (year date))]
       (not (date-in-set? holidays date compare-day-and-month)))))
 
 (defn make-western-business-day-fn [holiday-fns]
@@ -74,6 +78,38 @@
   ([the-name holiday-fns calendar-type weekend-fn]
     (let [business-day-fn (calendar-business-day-fn-map calendar-type)]
       (struct calendar the-name (business-day-fn holiday-fns)  weekend-fn (ref #{}) (ref #{})))))
+
+(def day-of-week-map
+  {:monday Calendar/MONDAY,       :tuesday Calendar/TUESDAY,
+   :wednesday Calendar/WEDNESDAY, :thursday Calendar/THURSDAY,
+   :friday Calendar/FRIDAY,       :saturday Calendar/SATURDAY, :sunday Calendar/SUNDAY})
+
+(defn weekend-day-impl?
+  "Checks if a date is a weekend day"
+  ([date]
+    (weekend-day-impl? date {:fn-weekend-day? default-weekend-fn}))
+  ([date {:keys [fn-weekend-day?]}]
+    (fn-weekend-day? date)))
+
+
+(defn is-day-of-week? [date day-of-week]
+  (let [date-day-of-week (.get date Calendar/DAY_OF_WEEK)]
+    (= date-day-of-week (day-of-week-map day-of-week))))
+
+(defn default-weekend-fn [date]
+  (let [day-of-week (.get date Calendar/DAY_OF_WEEK)
+        weekend-days #{Calendar/SATURDAY Calendar/SUNDAY}
+        weekend-day (weekend-days day-of-week)]
+    (not (nil? weekend-day))))
+
+(defn monday?     [date] (is-day-of-week? date :monday))
+(defn tuesday?    [date] (is-day-of-week? date :tuesday))
+(defn wednesday?  [date] (is-day-of-week? date :wednesday))
+(defn thursday?   [date] (is-day-of-week? date :thursday))
+(defn friday?     [date] (is-day-of-week? date :friday))
+(defn saturday?   [date] (is-day-of-week? date :saturday))
+(defn sunday?     [date] (is-day-of-week? date :sunday))
+
 
 ;;; Easter Monday tables
 
