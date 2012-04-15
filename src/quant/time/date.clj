@@ -25,6 +25,16 @@
   (year [this]
     (.get this Calendar/YEAR)))
 
+(extend-protocol Date
+  nil
+
+  (day [this]
+    0)
+  (month [this]
+    0)
+  (year [this]
+    0))
+
 (defn new-date
   ([]
     "Returns current day"
