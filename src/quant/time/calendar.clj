@@ -7,20 +7,20 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.time.calendar
-  (:use [quant.time.date :only (new-date day month year next-day)])
+  (:use [quant.time.date :only (new-date day month year next-day)]
+        [quant.time.calendars.calendar-impl :only (new-calendar-impl, weekend-day-impl?)]
+        [quant.time.calendars.germany]
+        [quant.time.calendars.uk]
+        [quant.time.calendars.us]
+  )
   (:import [java.util GregorianCalendar Calendar]))
 
-(defstruct calendar :name :fn-business-day? :fn-weekend-day? :added-holidays :removed-holidays)
+(defn new-calendar [country market]
+  (new-calendar-impl country market))
 
-(defn calendar-selector [country market]
-  (list country market))
-
-(defmulti new-calendar calendar-selector)
-
-(defmethod new-calendar :default [country market]
-  (throw (IllegalArgumentException. "Unknown country or market")))
-
-(defn business-day? [{:keys [fn-business-day? fn-weekend-day? added-holidays removed-holidays]} date]
+(defn business-day? [date {:keys [fn-business-day? fn-weekend-day? added-holidays removed-holidays]}]
+  "Checks if a date is a business day
+   (not holiday or weekend)"
   (if (fn-weekend-day? date)
     false
     (if (added-holidays date)
@@ -29,33 +29,29 @@
         true
         (fn-business-day? date)))))
 
-(defn weekend-day? [{:keys [fn-weekend-day?]} date]
-  (fn-weekend-day? date))
+(defn weekend-day?
+  "Checks if a date is a weekend day"
+  ([date]
+    (weekend-day-impl? date))
+  ([date calendar]
+    (weekend-day-impl? date calendar)))
 
 (defn holiday-list 
+  "Returns the list of holidays between 2 dates
+   (inclusive) for a given calendar"
   ([calendar start-date end-date]
     (holiday-list calendar start-date end-date false))
   ([calendar start-date end-date include-weekends]
     (loop [date start-date, holidays []]
-      (do
-      (prn "*********************")
-      (prn "holiday-list: day=" (day date))
-      (prn "*********************")
-      (prn "holiday-list: holidays loop start=" (map day holidays))
       (if (= date (next-day end-date))
-        (do
-        (prn "holiday-list : holidays return=" (map day holidays))
-        holidays)
+        holidays
         (let [holidays-upd
-                (if (not (business-day? calendar date))
-                  (if (not (weekend-day? calendar date))
+                (if (not (business-day? date calendar))
+                  (if (not (weekend-day? date calendar))
                     (conj holidays date)
                     (if include-weekends
                       (conj holidays date)
                       holidays))
-                  holidays)
-              _ (prn "*********************")
-              _ (prn "holiday-list: holidays-upd=" (map day holidays-upd))
-              ]
-          (recur (next-day date) holidays-upd)))))))
+                  holidays)]
+          (recur (next-day date) holidays-upd))))))
 
