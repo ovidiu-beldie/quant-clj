@@ -14,9 +14,7 @@
     [quant.math.integrals.core]
     [incanter.core :only (abs)]))
 
-(defstruct integration-policy :policy-integrate :policy-nb-evals)
-
-(defn default-integrate [f a b I N]
+(defn default-integ [f a b I N]
   (let [dx (/ (- b a) N)
         x-init (+ a (half dx))
         xs (iterate #(+ % dx) x-init)
@@ -25,9 +23,7 @@
                  (reduce + 0))]
     (half (+ I (* dx sum)))))
 
-(def default-policy (struct integration-policy default-integrate, 2))
-  
-(defn mid-point-integrate [f a b I N]
+(defn midpoint-integ [f a b I N]
   (let [dx (/ (- b a) N)
         x-init (+ a (/ dx 6))
         D (* 2 dx 1/3)
@@ -45,42 +41,36 @@
       (- b a) 
       (double 1/2)))
 
-(defrecord Trapezoid
-    [in])
+;; Integration policies
+(def default-p {:fn default-integ, :nb-ev 2})
+(def midpoint-p {:fn midpoint-integ, :nb-ev 3})
+(def integ-policy {:default default-p, :midpoint midpoint-p})
 
-(extend-type Trapezoid
-  Integrable
+(defn trapezoid [acc max-ev policy]
+  "Returns a trapezoid integrator. Args are: the absolute accuracy,
+the max nb of evals and a policy which can be :default or :midpoint"
+  (reify Integrable
+    (integrate [_ f a b]
+      (let [p (integ-policy policy default-p)]
+        (loop [N 1, I (init-i f a b), i 1]
+          (let [newI ((p :fn) f a b I N)]
+            (if (done? I newI acc i)
+              newI
+              (if (= i max-ev)
+                (throw (Error. "max number of iterations reached"))
+                (recur (* N (p :nb-ev)) newI (inc i))))))))))
 
-  (integrate [{:keys [in]} f a b]
-    (let [integ (partial (in :policy-integrate) f a b)]
-      (loop [N 1, I (init-i f a b), i 1]
-        (let [newI (integ I N)]
-          (if (done? I newI (in :abs-accuracy) i)
-            newI
-            (if (= i (in :max-evals))
-              (throw (Error. "max number of iterations reached"))
-              (recur (* N (in :policy-nb-evals)) newI (inc i))))))))) 
-
-(defn trapezoid [abs-accuracy max-evals integ-policy]
-  (let [arg (make-integrator abs-accuracy max-evals)]
-    (Trapezoid. (merge arg integ-policy))))
-
-(defrecord Simpson [in])
-
-(extend-type Simpson
-  Integrable
-
-  (integrate [{:keys [in]} f a b]
-    (let [integ (partial (in :policy-integrate) f a b)]
+(defn simpson [acc max-ev]
+  "Returns a simpson integrator. Takes as args the absolute accuracy,
+the max nb of evals"
+  (reify Integrable
+    (integrate [_ f a b]
       (loop [N 1, I (init-i f a b), adjI (init-i f a b), i 1]
-        (let [newI (integ I N)
+        (let [newI ((default-p :fn) f a b I N)
               newAdjI (-> (* newI 4) (- I) (/ 3))]
-          (if (done? adjI newAdjI (in :abs-accuracy) i)
+          (if (done? adjI newAdjI acc i)
             newAdjI
-            (if (= i (in :max-evals))
+            (if (= i max-ev)
               (throw (Error. "max number of iterations reached"))
               (recur (twice N) newI newAdjI (inc i)))))))))
 
-(defn simpson [abs-accuracy max-evals]
-  (let [arg (make-integrator abs-accuracy max-evals)]
-    (Trapezoid. (merge arg default-policy))))
