@@ -11,7 +11,7 @@
 (ns quant.test.math.matrix-utilities.test-tqr-eigen-decomposition
   (:use 
     [quant.math.matrix-utilities.tqr-eigen-decomposition]
-    [clojure.contrib.generic.math-functions :only (approx=)]
+    [clojure.algo.generic.math-functions :only (approx=)]
     [clojure.test :only (deftest, deftest, is, testing)]))
 
 (def tolerance 1.0E-10)

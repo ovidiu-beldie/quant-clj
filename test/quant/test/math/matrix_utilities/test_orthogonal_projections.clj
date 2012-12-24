@@ -13,7 +13,7 @@
     [quant.math.matrix-utilities.orthogonal-projections]
     [quant.math.matrix :only (matrix)]
     [clojure.test :only (deftest, deftest, is, testing)]
-    [clojure.contrib.generic.math-functions :only (approx=)]
+    [clojure.algo.generic.math-functions :only (approx=)]
     [incanter.core :only (abs)])
   (:import  [cern.jet.random.engine MersenneTwister]
             [java.lang Integer]))
