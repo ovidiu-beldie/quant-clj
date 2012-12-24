@@ -10,11 +10,12 @@
 
 (ns quant.math.integrals.gauss-polynomials
   (:import [cern.jet.stat.tdouble Gamma])
-  (:use [quant.math.integrals.gauss-polynomials-impl]
-        [incanter.core :only (pow, exp, sqrt, abs)]))
+  (:use [quant.common :only (twice half)]
+   [quant.math.integrals.gauss-polynomials-impl :only (do-if-int)]
+   [incanter.core :only (pow, exp, sqrt, abs)]))
 
 ;; Protocol implemented by all integral types
-(defprotocol GaussOrthogonalPolynomial
+(defprotocol GaussOrthoPoly
   (mu-0 [this])
   (alpha [this i])
   (beta [this i])
@@ -23,60 +24,59 @@
 ;;; Integral types
 
 ;; Laguerre
-(defrecord GaussLaguerrePolynomial [s])
+(defrecord Laguerre [s])
 
-(extend-type GaussLaguerrePolynomial
-  GaussOrthogonalPolynomial
+(extend-type Laguerre
+  GaussOrthoPoly
 
-  (mu-0 [{:keys [s]}]
+  (mu-0 [{s :s}]
     (exp (Gamma/logGamma (inc s))))
 
-  (alpha [{:keys [s]} i]
-    (do-if-int i #(+ i i 1 s)))
+  (alpha [{s :s} i]
+    (do-if-int i #(+ (twice i) 1 s)))
 
-  (beta [{:keys [s]} i]
+  (beta [{s :s} i]
     (do-if-int i #(* i (+ i s))))
 
-  (w [{:keys [s]} x]
+  (w [{s :s} x]
     (* (pow x s) (exp (- x)))))
 
 ;; Hermite
-(defrecord GaussHermitePolynomial [mu])
+(defrecord Hermite [mu])
 
-(extend-type GaussHermitePolynomial
-  GaussOrthogonalPolynomial
+(extend-type Hermite
+  GaussOrthoPoly
 
-  (mu-0 [{:keys [mu]}]
+  (mu-0 [{mu :mu}]
     (exp (Gamma/logGamma (+ mu 0.5))))
 
   (alpha [_ i]
     (do-if-int i #(+ 0)))
 
-  (beta [{:keys [mu]} i]
+  (beta [{mu :mu} i]
     (letfn [(func []
               (if (odd? i)
-                (+ (/ i 2) mu)          
-                (/ i 2)))]
+                (+ (half i) mu)
+                (half i)))]
       (do-if-int i func)))
 
-  (w [{:keys [mu]} x]
-    (let [fact1 (pow (abs x) (* 2 mu))
+  (w [{mu :mu} x]
+    (let [fact1 (pow (abs x) (twice mu))
           fact2 (exp (* (- x) x))]
       (* fact1 fact2))))
 
 ;; Jacobi
-(defrecord GaussJacobiPolynomial [a b])
+(defrecord Jacobi [a b])
 
-(extend-type GaussJacobiPolynomial
-  GaussOrthogonalPolynomial
+(extend-type Jacobi
+  GaussOrthoPoly
 
   (mu-0 [{:keys [a b]}]
     (let [fact1 (+ a b 1)
           fact2-args [(inc a) (inc b) (+ a b 2)]
           fact2-terms (map #(Gamma/logGamma %) fact2-args)
-          fact2 (- 
-                    (reduce + fact2-terms) 
-                    (* 2 (last fact2-terms)))]
+          fact2 (- (reduce + fact2-terms)
+                   (twice (last fact2-terms)))]
       (* (pow 2 fact1) (exp fact2))))
 
   (alpha [{:keys [a b]} i]
@@ -89,10 +89,10 @@
     (* (pow (- 1 x) a) (pow (inc x) b))))
 
 ;; Hyperbolic
-(defrecord GaussHyperbolicPolynomial [])
+(defrecord Hyperbolic [])
 
-(extend-type GaussHyperbolicPolynomial
-  GaussOrthogonalPolynomial
+(extend-type Hyperbolic
+  GaussOrthoPoly
 
   (mu-0 [_]
     Math/PI)
@@ -104,8 +104,7 @@
     (letfn [(func []
               (if (zero? i)
                 Math/PI
-                (let [half-pi (/ Math/PI 2)]
-                  (* half-pi half-pi i i))))]
+                (* (sqr (half Math/PI)) (sqr i))))]
       (do-if-int i func)))
   
   (w [_ x]
@@ -115,18 +114,18 @@
 
 (defn laguerre [s]
   (if (> s -1)
-    (GaussLaguerrePolynomial. s)
-    (throw (IllegalArgumentException. "s must be superior to -1"))))
+    (Laguerre. s)
+    (throw (IllegalArgumentException. "s must be > than -1"))))
 
 (defn hermite [mu]
   (if (> mu -0.5)
-    (GaussHermitePolynomial. mu)
-    (throw (IllegalArgumentException. "mu must be superior to -0.5"))))
+    (Hermite. mu)
+    (throw (IllegalArgumentException. "mu must be > than -0.5"))))
 
 (defn jacobi [a b]
   (if (and (> a -1) (> b -1))
-    (GaussJacobiPolynomial. a b)
-    (throw (IllegalArgumentException. "Both alpha and beta must be superior to -1"))))
+    (Jacobi. a b)
+    (throw (IllegalArgumentException. "alpha & beta must be > than -1"))))
 
 (defn legendre []
   (jacobi 0 0))
@@ -141,15 +140,15 @@
   (jacobi (- lambda 0.5) (- lambda 0.5)))
 
 (defn hyperbolic []
-  (GaussHyperbolicPolynomial. ))
+  (Hyperbolic. ))
 
-;;; The following fns are built on top of the fns implementing the GaussOrthogonalPolynomial protocol. They also take a GaussOrthogonalPolynomial object as first arg
+;;; The following fns are built on top of the fns implementing the GaussOrthogonalPolynomial
+;;; protocol. They also take a GaussOrthoPoly object as first arg
 
 (defn value [p n x]
   (let [e1 1
         e2  (- x (alpha p 0))]
     (letfn [(values
-            ;Inspired by 'Programming clojure', Stu Halloway, page 136
               ([]
                 (concat [e1 e2] (values e1 e2 2)))
               ([a b n]

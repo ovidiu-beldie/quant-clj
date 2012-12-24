@@ -9,57 +9,55 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.math.integrals.gauss-polynomials-impl
-  (:import [cern.jet.stat.tdouble Gamma])
-  (:use [clojure.contrib.math :only (ceil)]
-        [clojure.contrib.generic.math-functions :only (sqr)]))
+  (:use [quant.common :only (twice)])
+  (:import [cern.jet.stat.tdouble Gamma]))
 
-(declare handle-regular,handle-lhopital) 
+(declare handle-regular, handle-lhopital)
 
 (defn alpha-jacobi 
   ([a b i]
   "Compute limit operands for regular alpha"
     (let [numer (- (sqr b) (sqr a))
-          factor (+ i i a b)
+          factor (+ (twice i) a b)
           denom (* factor (+ factor 2))]
       (handle-regular numer denom a b i alpha-jacobi)))
 
   ([a b i _]
   "Compute limit operands for l'Hopital alpha"
-    (let [numer (* 2 b)
-        denom (* 2 (+ a b i i 1))]
+    (let [numer (twice b)
+        denom (twice (+ a b (twice i) 1))]
       (handle-lhopital numer denom))))
     
 (defn beta-jacobi
   ([a b i]
   "Compute limit operands for regular beta"
     (let [numer (* 4 i (+ i a) (+ i b) (+ a b i))  
-          factor (sqr (+ a b i i))
-          denom (* factor (- factor 1))]
+          factor (sqr (+ a b (twice i)))
+          denom (* factor (dec factor))]
       (handle-regular numer denom a b i beta-jacobi)))
 
   ([a b i _]
   "Compute limit operands for l'Hopital beta" 
-    (let [factor (+ i i a a b)
+    (let [factor (+ (twice i) (twice a) b)
         numer (* 4 i (+ i b) factor)
-        d (* 2 (+ i i a b))
+        d (twice (+ (twice i) a b))
         denom (* d (dec d))]
       (handle-lhopital numer denom))))
 
-(defn handle-regular [numer denom a b i func]
-  ""
+(defn handle-regular [numer denom a b i f]
   (if (zero? denom)
         (if (zero? numer)
-          (func a b i :lhopital)
+          (f a b i :lhopital)
           (throw (ArithmeticException. "can't compute operand for jacobi integration")))
         (/ numer denom)))
 
 (defn handle-lhopital [numer denom]
-  ""
   (if (zero? denom)
         (throw (ArithmeticException. "can't compute operand for jacobi integration"))
         (/ numer denom)))
 
-(defn do-if-int [i func]
-  (if (= i (ceil i))
-    (func)  
-    (throw (IllegalArgumentException. "Parameter must be integer"))))
+(defn do-if-int [i f]
+  "Calls f only if i is a natural number"
+  (if (== i (Math/ceil i))
+    (f)
+    (throw (IllegalArgumentException. "arg must be a natural nr"))))
