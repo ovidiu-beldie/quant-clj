@@ -10,9 +10,9 @@
 
 (ns quant.math.integrals.gauss-polynomials
   (:import [cern.jet.stat.tdouble Gamma])
-  (:use [quant.common :only (twice half)]
-   [quant.math.integrals.gauss-polynomials-impl :only (do-if-int)]
-   [incanter.core :only (pow, exp, sqrt, abs)]))
+  (:use [quant.common :only (twice half sqr)]
+        [quant.math.integrals.gauss-polynomials-impl :only (do-if-int alpha-jacobi beta-jacobi)]
+        [incanter.core :only (pow, exp, sqrt, abs)]))
 
 ;; Protocol implemented by all integral types
 (defprotocol GaussOrthoPoly

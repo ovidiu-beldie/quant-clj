@@ -9,7 +9,7 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.math.integrals.gauss-polynomials-impl
-  (:use [quant.common :only (twice)])
+  (:use [quant.common :only (twice sqr)])
   (:import [cern.jet.stat.tdouble Gamma]))
 
 (declare handle-regular, handle-lhopital)
