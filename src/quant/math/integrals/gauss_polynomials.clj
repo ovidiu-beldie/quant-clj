@@ -21,110 +21,56 @@
   (beta [this i])
   (w [this x]))
 
-;;; Integral types
-
-;; Laguerre
-(defrecord Laguerre [s])
-
-(extend-type Laguerre
-  GaussOrthoPoly
-
-  (mu-0 [{s :s}]
-    (exp (Gamma/logGamma (inc s))))
-
-  (alpha [{s :s} i]
-    (do-if-int i #(+ (twice i) 1 s)))
-
-  (beta [{s :s} i]
-    (do-if-int i #(* i (+ i s))))
-
-  (w [{s :s} x]
-    (* (pow x s) (exp (- x)))))
-
-;; Hermite
-(defrecord Hermite [mu])
-
-(extend-type Hermite
-  GaussOrthoPoly
-
-  (mu-0 [{mu :mu}]
-    (exp (Gamma/logGamma (+ mu 0.5))))
-
-  (alpha [_ i]
-    (do-if-int i #(+ 0)))
-
-  (beta [{mu :mu} i]
-    (letfn [(func []
-              (if (odd? i)
-                (+ (half i) mu)
-                (half i)))]
-      (do-if-int i func)))
-
-  (w [{mu :mu} x]
-    (let [fact1 (pow (abs x) (twice mu))
-          fact2 (exp (* (- x) x))]
-      (* fact1 fact2))))
-
-;; Jacobi
-(defrecord Jacobi [a b])
-
-(extend-type Jacobi
-  GaussOrthoPoly
-
-  (mu-0 [{:keys [a b]}]
-    (let [fact1 (+ a b 1)
-          fact2-args [(inc a) (inc b) (+ a b 2)]
-          fact2-terms (map #(Gamma/logGamma %) fact2-args)
-          fact2 (- (reduce + fact2-terms)
-                   (twice (last fact2-terms)))]
-      (* (pow 2 fact1) (exp fact2))))
-
-  (alpha [{:keys [a b]} i]
-    (do-if-int i #(alpha-jacobi a b i)))
-
-  (beta [{:keys [a b]} i]
-    (do-if-int i #(beta-jacobi a b i)))
-
-  (w [{:keys [a b]} x]
-    (* (pow (- 1 x) a) (pow (inc x) b))))
-
-;; Hyperbolic
-(defrecord Hyperbolic [])
-
-(extend-type Hyperbolic
-  GaussOrthoPoly
-
-  (mu-0 [_]
-    Math/PI)
-
-  (alpha [_ i]
-    (do-if-int i #(+ 0)))
-  
-  (beta [_ i]
-    (letfn [(func []
-              (if (zero? i)
-                Math/PI
-                (* (sqr (half Math/PI)) (sqr i))))]
-      (do-if-int i func)))
-  
-  (w [_ x]
-    (/ 1 (Math/cosh x))))
-
 ;;; The following functions are the equivalent of constructors for integral types
 
 (defn laguerre [s]
   (if (> s -1)
-    (Laguerre. s)
+    (reify GaussOrthoPoly
+      (mu-0 [_]
+        (exp (Gamma/logGamma (inc s))))
+      (alpha [_ i]
+        (do-if-int i #(+ (twice i) 1 s)))
+      (beta [_ i]
+        (do-if-int i #(* i (+ i s))))
+      (w [_ x]
+        (* (pow x s) (exp (- x)))))
     (throw (IllegalArgumentException. "s must be > than -1"))))
 
 (defn hermite [mu]
   (if (> mu -0.5)
-    (Hermite. mu)
+    (reify GaussOrthoPoly
+      (mu-0 [_]
+        (exp (Gamma/logGamma (+ mu 0.5))))
+      (alpha [_ i]
+        (do-if-int i #(+ 0)))
+      (beta [_ i]
+        (letfn [(func []
+                  (if (odd? i)
+                    (+ (half i) mu)
+                    (half i)))]
+          (do-if-int i func)))
+      (w [_ x]
+        (let [fact1 (pow (abs x) (twice mu))
+              fact2 (exp (* (- x) x))]
+          (* fact1 fact2))))
     (throw (IllegalArgumentException. "mu must be > than -0.5"))))
 
 (defn jacobi [a b]
   (if (and (> a -1) (> b -1))
-    (Jacobi. a b)
+    (reify GaussOrthoPoly
+      (mu-0 [_ ]
+        (let [fact1 (+ a b 1)
+              fact2-args [(inc a) (inc b) (+ a b 2)]
+              fact2-terms (map #(Gamma/logGamma %) fact2-args)
+              fact2 (- (reduce + fact2-terms)
+                       (twice (last fact2-terms)))]
+          (* (pow 2 fact1) (exp fact2))))
+      (alpha [_ i]
+        (do-if-int i #(alpha-jacobi a b i)))
+      (beta [_ i]
+        (do-if-int i #(beta-jacobi a b i)))
+      (w [_ x]
+        (* (pow (- 1 x) a) (pow (inc x) b))))
     (throw (IllegalArgumentException. "alpha & beta must be > than -1"))))
 
 (defn legendre []
@@ -140,7 +86,19 @@
   (jacobi (- lambda 0.5) (- lambda 0.5)))
 
 (defn hyperbolic []
-  (Hyperbolic. ))
+  (reify GaussOrthoPoly
+    (mu-0 [_]
+      Math/PI)
+    (alpha [_ i]
+      (do-if-int i #(+ 0)))
+    (beta [_ i]
+      (letfn [(func []
+                (if (zero? i)
+                  Math/PI
+                  (* (sqr (half Math/PI)) (sqr i))))]
+        (do-if-int i func)))
+    (w [_ x]
+      (/ 1 (Math/cosh x)))))
 
 ;;; The following fns are built on top of the fns implementing the GaussOrthogonalPolynomial
 ;;; protocol. They also take a GaussOrthoPoly object as first arg
