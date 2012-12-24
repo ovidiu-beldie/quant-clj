@@ -9,26 +9,21 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.math.integrals.segment
-  (:use   
-    [quant.math.integrals.core]
-    [incanter.core :only (abs)]))
+  (:use
+   [quant.math.integrals.core]
+   [quant.common :only (half)]))
 
-(defrecord Segment [in])
-
-(extend-type Segment
-  Integrable
-
-  (integrate [{:keys [in]} f a b]
-    (let [dx (/ (- b a) (in :intervals))
-          end (- b (* 0.5 dx))]
-      (loop [x (+ a dx), sum (* 0.5 (+ (f a) (f b)))]
-        (if (>= x end)
-          (* sum dx)
-          (recur (+ x dx) (+ sum (f x))))))))
-
-(defn segment [intervals]
-  (if (pos? intervals)
-    (let [arg (make-integrator 1 1)]
-      (Segment. (merge arg {:intervals intervals})))
-    (throw (IllegalArgumentException. "intervals number must be higher than 0"))))
+(defn segment [in]
+  ""
+  (if (pos? in)
+    (reify Integrable
+      (integrate [_ f a b]
+        (let [dx (/ (- b a) in)
+              end (- b (half dx))
+              xs (iterate #(+ % dx) (+ a dx))
+              sum (->> (take-while #(< % end) xs)
+                       (map f)
+                       (reduce + (half (+ (f a) (f b)))))]
+          (double (* sum dx)))))
+    (throw (IllegalArgumentException. "intervals nr must be > than 0"))))
 
