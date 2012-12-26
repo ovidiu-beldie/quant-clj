@@ -4,4 +4,6 @@
   :dependencies [[org.clojure/clojure "1.4.0"]
 				[org.clojure/algo.generic "0.1.0"]
 				[incanter "1.4.1"]
-				[colt "1.2.0"]])
+				[colt "1.2.0"]]
+  :test-selectors {:current :current
+				   :all (constantly true)})
