@@ -9,13 +9,15 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.math.integrals.kronrod
-  (:use   
-    [quant.defines :only (epsilon min-pos-real)]
-    [quant.math.integrals.core]
-    [incanter.core :only (abs, pow)]
-    [clojure.stacktrace]))
+  (:use
+   [quant.common :only (half)]
+   [quant.defines :only (epsilon min-pos-real)]
+   [quant.math.integrals.core]
+   [incanter.core :only (abs, pow)]
+   [clojure.stacktrace]))
 
-(declare loop-10-21, comp-resasc, formula, convergent?, set-integral-params, rescale-err, form-higher-order)
+(declare loop-10-21, comp-resasc, formula, convergent?, set-integral-params,
+         rescale-err, form-higher-order)
 (declare integ-recur, integ-recur-impl)
 (declare x1 x2 x3 x4 w10 w21a w21b w43a w43b w87a w87b)
 (declare g7w k15w k15t)
@@ -28,8 +30,8 @@
   Integrable
   
   (integrate [{:keys [in]} f a b]
-    (let [hl (* 0.5 (- b a))
-          center (* 0.5 (+ b a))
+    (let [hl (half (- b a))
+          center (half (+ b a))
           nb-evals [21, 43, 87]]
       (loop [i 0, old-p nil]
         (let [p (formula (nb-evals i) f hl center old-p)]
@@ -49,39 +51,38 @@
 
 ;; 10 and 21 points formula
 
-(defmethod formula 21 [nb-evals f hl center _]        
+(defmethod formula 21 [nb-ev f hl center _]
   (let [fc (f center)
-        l1 (loop-10-21 f hl center x1 w21a)
-        l2 (loop-10-21 f hl center x2 w21b)
-        res10 (l1 :res10)
-        res21 (+ (* (w21b 5) fc) (l1 :res21) (l2 :res21)) 
-        res-abs (+ (* (w21b 5) (abs fc)) (l1 :res-abs) (l2 :res-abs)) 
-        savfun (into (l1 :fval) (l2 :fval))
-        mean (* 0.5 res21)
-        res-asc (+ (* (w21b 5) (abs (- fc mean))) 
-                  (comp-resasc l1 l2 mean))
-        err (rescale-err (* (- res21 res10) hl) 
-                          {:res-abs (* res-abs hl), :res-asc res-asc})]
-    {:savfun savfun, :res-abs (* res-abs hl), :res-asc (* res-asc hl), 
-      :result (* res21 hl), :err err, :nb-evals nb-evals}))
+        lp (partial loop-10-21 f hl center)
+        {r10 :r10, r21-1 :r21, r-abs-1 :r-abs, fv-1 :fv :as l1} (lp x1 w21a)
+        {r21-2 :r21, r-abs-2 :r-abs, fv-2 :fv :as l2} (lp x2 w21b)
+        r21 (+ (* (w21b 5) fc) r21-1 r21-2)
+        r-abs (+ (* (w21b 5) (abs fc)) r-abs-1 r-abs-2)
+        savfun (into fv-1 fv-2)
+        mean (half r21)
+        r-asc (+ (* (w21b 5) (abs (- fc mean)))
+                 (comp-resasc l1 l2 mean))
+        err (rescale-err (* (- r21 r10) hl)
+                          {:r-abs (* r-abs hl), :r-asc r-asc})]
+    {:savfun savfun, :r-abs (* r-abs hl), :r-asc (* r-asc hl),
+      :res (* r21 hl), :err err, :nb-ev nb-ev}))
         
-(defn loop-10-21 [f hl center x w21]
+(defn loop-10-21 [f hl c x w21]
   (let [absc (map #(* hl %) x)
-        fval1 (map #(f (+ center %)) absc)
-        fval2 (map #(f (- center %)) absc)
-        fval (map + fval1 fval2)
-        res10 (reduce + (map * w10 fval))
-        res21 (reduce + (map * w21 fval))
-        abs-sum (map #(+ (abs %1) (abs %2)) fval1 fval2)
-        res-abs (reduce + (map * w21 abs-sum))]
-    {:fval fval, :fval1 fval1, :fval2 fval2, :res10 res10, 
-      :res21 res21, :res-abs res-abs}))
+        fv1 (map #(f (+ c %)) absc)
+        fv2 (map #(f (- c %)) absc)
+        fv (map + fv1 fv2)
+        r10 (reduce + (map * w10 fv))
+        r21 (reduce + (map * w21 fv))
+        abs-sum (map #(+ (abs %1) (abs %2)) fv1 fv2)
+        r-abs (reduce + (map * w21 abs-sum))]
+    {:fv fv, :fv1 fv1, :fv2 fv2, :r10 r10, :r21 r21, :r-abs r-abs}))
   
 (defn comp-resasc [l1 l2 m]
   (let [subst-mean (fn [v]
           (map #(- % m) v))
-        sum (fn [l]
-          (map + (subst-mean (l :fval1)) (subst-mean (l :fval2))))
+        sum (fn [{:keys [fv1 fv2]}]
+              (map + (subst-mean fv1) (subst-mean fv2)))
         loop-term (fn [l w21]
           (map + w21 (sum l)))]
     (reduce + (map + (loop-term l1 w21a) (loop-term l2 w21b)))))
@@ -118,19 +119,19 @@
       (assoc :result (* res87 hl))
       (assoc :nb-evals nb-evals)))))
 
-(defmethod formula 43 [nb-evals f hl center p]
-  (form-higher-order nb-evals f hl center p w43a w43b 11 :res43 (p :res21)))
+(defmethod formula 43 [nb-ev f hl center {:keys [r21] :as p}]
+  (form-higher-order nb-ev f hl center p w43a w43b 11 :r43 r21))
 
-(defmethod formula 87 [nb-evals f hl center p]
-  (form-higher-order nb-evals f hl center p w87a w87b 22 :res87 (p :res43)))
+(defmethod formula 87 [nb-ev f hl center {:keys [r43] :as p}]
+  (form-higher-order nb-ev f hl center p w87a w87b 22 :r87 r43))
 
-(defn form-higer-order [nb-evals f hl center p wxxa wxxb wxxb-index res-key resxx-inf]
+(defn form-higer-order [nb-ev f hl c p wxxa wxxb wxxb-index res-key resxx-inf]
   "helper function for 43 and 87 formulae"
-  (let [rxx-init (* (wxxb wxxb-index) (f center))
+  (let [rxx-init (* (wxxb wxxb-index) (f c))
         rxx (reduce + rxx-init (map * (p :savfun) wxxa))
         absc (map * (cycle hl) x4)
         op-f (fn [op]
-                (map f (map #(op % center) absc)))
+                (map f (map #(op % c) absc)))
         fval (map + (op-f +) (op-f -))
         resxx (reduce rxx + (map + fval wxxb))
         err (rescale-err (* (- resxx resxx-inf) hl) p)]
@@ -138,24 +139,24 @@
       (assoc :savfun (concat (p :savfun) fval))
       (assoc res-key resxx)
       (assoc :err err)
-      (assoc :result (* resxx hl))
-      (assoc :nb-evals nb-evals))))
+      (assoc :res (* resxx hl))
+      (assoc :nb-ev nb-ev))))
 
 ;;; Generic helper fns
 
-(defn rescale-err [err {:keys [res-abs res-asc]}]
+(defn rescale-err [err {:keys [r-abs r-asc]}]
   (do
-  (prn "err=" err "res-abs=" res-abs "res-asc=" res-asc "epsilon=" (epsilon))
+  (prn "err=" err "r-abs=" r-abs "r-asc=" r-asc "epsilon=" (epsilon))
   (let [scale (fn [e]
-                (if (every? #(not= % 0) [e res-asc])
-                  (let [scale (pow (* 200 e (/ 1 res-asc)) 1.5)]
+                (if (every? #(not= % 0) [e r-asc])
+                  (let [scale (pow (* 200 e (/ 1 r-asc)) 1.5)]
                     (if (< scale 1)
-                      (* res-asc scale)
-                      res-asc))
+                      (* r-asc scale)
+                      r-asc))
                   e))
         min-err (fn [e]
-                  (if (> res-abs (/ min-pos-real (* 50 (epsilon))))
-                    (let [min-err (* 50 (epsilon) res-abs)]
+                  (if (> r-abs (/ min-pos-real (* 50 (epsilon))))
+                    (let [min-err (* 50 (epsilon) r-abs)]
                       (if (> min-err e)
                         min-err))
                     e))]
@@ -166,10 +167,10 @@
 
 (defn convergent? [in p]
   (or (< (p :err) (in :abs-accuracy))
-          (< (p :err) (* (in :rel-accuracy) (abs (p :result))))))
+          (< (p :err) (* (in :rel-accuracy) (abs (p :res))))))
 
-(defn set-integral-params [in {:keys [result err nb-evals]}]
-  (assoc in :result result, :abs-err err, :nb-evals nb-evals))
+(defn set-integral-params [in {:keys [res err nb-ev]}]
+  (assoc in :res res, :abs-err err, :nb-ev nb-ev))
 
 
 ;;; adaptive
@@ -182,18 +183,18 @@
   (integrate [{:keys [in]} f a b]
     (integ-recur in f a b (in :abs-accuracy))))
 
-(defn kronrod-adaptive [abs-accuracy max-evals]
-  (if (< max-evals 15)
+(defn kronrod-adaptive [abs-accuracy max-ev]
+  (if (< max-ev 15)
     (throw (IllegalArgumentException. "max-evals must be at least 15"))
-    (let [arg (make-integrator abs-accuracy max-evals)]
-      (KronrodAdaptive. (merge arg {:nb-evals 0})))))
+    (let [arg (make-integrator abs-accuracy max-ev)]
+      (KronrodAdaptive. (merge arg {:nb-ev 0})))))
 
-(defn integ-recur [in f a b tolerance]
-  (trampoline integ-recur-impl in f a b tolerance))
+(defn integ-recur [in f a b tol]
+  (trampoline integ-recur-impl in f a b tol))
 
-(defn integ-recur-impl [in f a b tolerance]
-  (let [hl (/ (- b a) 2)
-        center (/ (+ a b) 2)
+(defn integ-recur-impl [in f a b tol]
+  (let [hl (half (- b a))
+        center (half (+ a b))
         _ (prn "a=" a "b=" b "center=" center)
         take-every-other (fn [coll from]
                             (map first (partition 2 (drop from coll))))
@@ -208,14 +209,14 @@
         k15_interm (reduce + k15-init (map * (take-every-other fsum 1) (take-every-other k15w 1)))
         g7 (* g7_interm hl)
         k15 (* k15_interm hl)
-        _ (prn "k15=" k15 "g7=" g7 "abs(k15-g7)=" (abs (- k15 g7)) "tolerance=" tolerance)
+        _ (prn "k15=" k15 "g7=" g7 "abs(k15-g7)=" (abs (- k15 g7)) "tol=" tol)
         new-in (assoc in :nb-evals (+ 15 (in :nb-evals)))]
-    (if (< (abs (- k15 g7)) tolerance)
-      (assoc new-in :result k15)
-      (if (> (+ (new-in :nb-evals) 30) (new-in :max-evals))
-        (throw (Exception. (str (+ 30 (new-in :nb-evals)) ">" (new-in :max-evals) " maximum number of function evaluations exceeded")))          
-        (+ (integ-recur-impl new-in f a center (/ tolerance 2)) 
-            (integ-recur-impl new-in f center b (/ tolerance 2)))))))
+    (if (< (abs (- k15 g7)) tol)
+      (assoc new-in :res k15)
+      (if (> (+ (new-in :nb-ev) 30) (new-in :max-ev))
+        (throw (Exception. (str (+ 30 (new-in :nb-ev)) ">" (new-in :max-ev) " maximum number of function evaluations exceeded")))
+        (+ (integ-recur-impl new-in f a center (half tol))
+            (integ-recur-impl new-in f center b (half tol)))))))
 
 
 ;;; non-adaptive parameters
