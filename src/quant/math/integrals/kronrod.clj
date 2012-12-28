@@ -12,26 +12,15 @@
   (:use
    [quant.common :only (half)]
    [quant.defines :only (epsilon min-pos-real)]
-   [quant.math.integrals.core]
    [incanter.core :only (abs, pow)]))
 
-(declare loop-10-21, comp-resasc, formula, convergent?, rescale-err,
-         form-higher-order, integ-recur)
-(declare x1 x2 x3 x4 w10 w21a w21b w43a w43b w87a w87b g7w k15w k15t)
+(declare loop-10-21, comp-resasc, rescale-err, form-higher-order
+         x1 x2 x3 x4 w10 w21a w21b w43a w43b w87a w87b g7w k15w k15t)
 
 ;;; non-adaptive
 
-(defn kronrod-non-adaptive [abs-acc max-ev rel-acc]
-  (reify Integrator
-    (integrate [_ f a b]
-      (let [hl (half (- b a))
-            center (half (+ b a))
-            nb-evals [21, 43, 87]]
-        (loop [i 0, old-p nil]
-          (let [p (formula (nb-evals i) f hl center old-p)]
-            (if (convergent? abs-acc rel-acc p)
-              (:res p)
-              (recur (inc i) p))))))))
+(defn points [i]
+  (["10-21" "43" "87"] i))
 
 (defn formula-dispatch [nb-evals f hl center p]
   nb-evals)
@@ -40,7 +29,7 @@
 
 ;; 10 and 21 points formula
 
-(defmethod formula 21 [nb-ev f hl center _]
+(defmethod formula "10-21" [nb-ev f hl center _]
   (let [fc (f center)
         lp (partial loop-10-21 f hl center)
         {r10 :r10, r21-a :r21, r-abs-a :r-abs, fv-a :fv :as la} (lp x1 w21a)
@@ -73,10 +62,10 @@
         loop-term (fn [l w21] (map + w21 (sum l)))]
     (reduce + (map + (loop-term l1 w21a) (loop-term l2 w21b)))))
     
-(defmethod formula 43 [nb-ev f hl center {:keys [r21] :as p}]
+(defmethod formula "43" [nb-ev f hl center {:keys [r21] :as p}]
   (form-higher-order nb-ev f hl center p w43a w43b 11 :r43 r21))
 
-(defmethod formula 87 [nb-ev f hl center {:keys [r43] :as p}]
+(defmethod formula "87" [nb-ev f hl center {:keys [r43] :as p}]
   (form-higher-order nb-ev f hl center p w87a w87b 22 :r87 r43))
 
 (defn form-higer-order [nb-ev f hl c p wxxa wxxb wxxb-index res-key resxx-inf]
@@ -99,8 +88,6 @@
 ;;; Generic helper fns
 
 (defn rescale-err [err {:keys [r-abs r-asc]}]
-  (do
-  (prn "err=" err "r-abs=" r-abs "r-asc=" r-asc "epsilon=" (epsilon))
   (let [scale (fn [e]
                 (if (every? #(not= % 0) [e r-asc])
                   (let [scale (pow (* 200 e (/ 1 r-asc)) 1.5)]
@@ -111,7 +98,7 @@
                     (let [min-err (* 50 (epsilon) r-abs)]
                       (if (> min-err e) min-err))
                     e))]
-  (-> err (abs) (scale) (min-err)))))
+    (-> err (abs) (scale) (min-err))))
 
 (defn convergent? [abs-acc rel-acc {:keys [err res]}]
   (or (< err abs-acc)
@@ -119,14 +106,7 @@
 
 ;;; adaptive
 
-(defn kronrod-adaptive [acc max-ev]
-  (if (< max-ev 15)
-    (throw (IllegalArgumentException. "max-evals must be >= than 15"))
-    (reify Integrator
-      (integrate [_ f a b]
-        (integ-recur f a b acc max-ev 0)))))
-
-(defn integ-recur [f a b tol max-ev nb-ev]
+(defn integ [f a b tol max-ev nb-ev]
   (let [hl (half (- b a))
         c (half (+ a b))
         ts (map #(* hl %) k15t)
@@ -147,9 +127,8 @@
       k15
       (if (> (+ nb-ev 30) max-ev)
         (throw (Exception. (str (+ 30 nb-ev) ">" max-ev" max nr of func evals exceeded")))
-        (+ (integ-recur f a c (half tol) max-ev new-nb-ev)
-           (integ-recur f c b (half tol) max-ev new-nb-ev))))))
-
+        (+ (integ f a c (half tol) max-ev new-nb-ev)
+           (integ f c b (half tol) max-ev new-nb-ev))))))
 
 ;;; non-adaptive parameters
 
