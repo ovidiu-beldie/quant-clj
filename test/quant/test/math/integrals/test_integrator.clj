@@ -11,12 +11,8 @@
 (ns quant.test.math.integrals.test-trapezoid
   (:use
     [incanter.core :only (sin cos)]
-    [incanter.distributions :only (normal-distribution)]
     [quant.math.integrals.core]
     [quant.common :only (sqr twice)]
-    [quant.math.integrals.trapezoid]
-    [quant.math.integrals.segment]
-    [quant.math.integrals.kronrod]
     [clojure.algo.generic.math-functions :only (approx=)]
     [clojure.test :only (deftest, is, testing)]))
 
@@ -29,13 +25,19 @@
 (def in-kronrod-adaptive     (partial integrate (kronrod-adaptive tol 1000)))
 (def in-kronrod-non-adaptive (partial integrate (kronrod-non-adaptive tol 100 tol)))
 
-(deftest test-default-integ
-  (is (= 31/2 (default-integ #(twice %) 2 5 10 2)))
-  (is (= 1915 (default-integ #(inc %) 50 100 30 3))))
+(defmacro with-private-fns [[ns fns] & tests]
+  "Refers private fns from ns and runs tests in context."
+  `(let ~(reduce #(conj %1 %2 `(ns-resolve '~ns '~%2)) [] fns)
+     ~@tests))
 
-(deftest test-midpoint-integ
-  (is (= 52/3 (midpoint-integ #(twice %) 2 5 10 2)))
-  (is (= 7630/3 (midpoint-integ #(inc %) 50 100 30 3))))
+(with-private-fns [quant.math.integrals.trapezoid [default-integ]]
+ (deftest test-default-integ
+   (is (= 31/2 (default-integ #(twice %) 2 5 10 2)))
+   (is (= 1915 (default-integ #(inc %) 50 100 30 3)))))
+(with-private-fns [quant.math.integrals.trapezoid [midpoint-integ]]
+ (deftest test-midpoint-integ
+   (is (= 52/3 (midpoint-integ #(twice %) 2 5 10 2)))
+   (is (= 7630/3 (midpoint-integ #(inc %) 50 100 30 3)))))
 
 (def test-data
   [[1   (constantly 1) 0 1  "f(x)=1"]
