@@ -5,10 +5,10 @@
 ; By using this software in any fashion, you are agreeing to be bound by
 ; the terms of this license.
 ; You must not remove this notice, or any other, from this software.
-; The initial QuantLib library, Clojure and any other open source software 
+; The initial QuantLib library, Clojure and any other open source software
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.test.math.integrals.test-trapezoid
+(ns quant.test.math.integrals.test-integrator
   (:use
     [incanter.core :only (sin cos)]
     [quant.math.integrals.core]
