@@ -10,13 +10,12 @@
 
 (ns quant.defines)
 
-(defn epsilon-impl []
-  (loop [e 1.0]
-    (if (= (+ 1.0 (* e 0.5)) 1.0)
-      e
-      (recur (* e 0.5)))))
-
-(def epsilon (memoize epsilon-impl))
+(defn epsilon []
+  @(delay
+    (loop [e 1.0]
+      (if (= (+ 1.0 (* e 0.5)) 1.0)
+        e
+        (recur (* e 0.5))))))
 
 (def min-pos-real (Double/MIN_VALUE))
 
