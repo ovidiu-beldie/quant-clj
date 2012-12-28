@@ -12,9 +12,9 @@
 
 (defn epsilon-impl []
   (loop [e 1.0]
-    (if (= (+ 1.0 (/ e 2.0)) 1.0)
+    (if (= (+ 1.0 (* e 0.5)) 1.0)
       e
-      (recur (/ e 2.0)))))
+      (recur (* e 0.5)))))
 
 (def epsilon (memoize epsilon-impl))
 
