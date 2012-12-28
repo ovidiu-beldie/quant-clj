@@ -45,7 +45,7 @@
    [0   cos            0 pi "f(x)=cos(x)"]])
 
 (defmacro gen-test [in-fn ex f a b desc]
-  `(is (approx= ~ex (~in-fn ~f ~a ~b) tol) ~desc))
+  `(is (approx= ~ex ~(list in-fn f a b) tol) ~desc))
 
 (defn all-tests [in-fn]
   (doseq [[ex f a b desc :as r] test-data]
@@ -57,9 +57,8 @@
   (testing "Simpson integral"
     (all-tests in-simpson))
   (testing "Segment integral"
-    (all-tests in-segment)))
-  #_(testing "Kronrod adaptive integral"
+    (all-tests in-segment))
+  (testing "Kronrod adaptive integral"
     (all-tests in-kronrod-adaptive))
-  (comment
   (testing "Kronrod non adaptive integral"
     (all-tests in-kronrod-non-adaptive)))
