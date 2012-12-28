@@ -16,7 +16,7 @@
 (defn segment [in]
   ""
   (if (pos? in)
-    (reify Integrable
+    (reify Integrator
       (integrate [_ f a b]
         (let [dx (/ (- b a) in)
               end (- b (half dx))

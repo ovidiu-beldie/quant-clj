@@ -49,21 +49,21 @@
 (defn trapezoid [acc max-ev policy]
   "Returns a trapezoid integrator. Args are: the absolute accuracy,
 the max nb of evals and a policy which can be :default or :midpoint"
-  (reify Integrable
+  (reify Integrator
     (integrate [_ f a b]
-      (let [p (integ-policy policy default-p)]
+      (let [{p-fn :fn, nb-ev :nb-ev} (integ-policy policy default-p)]
         (loop [N 1, I (init-i f a b), i 1]
-          (let [newI ((p :fn) f a b I N)]
+          (let [newI (p-fn f a b I N)]
             (if (done? I newI acc i)
               newI
               (if (= i max-ev)
                 (throw (Error. "max number of iterations reached"))
-                (recur (* N (p :nb-ev)) newI (inc i))))))))))
+                (recur (* N nb-ev) newI (inc i))))))))))
 
 (defn simpson [acc max-ev]
   "Returns a simpson integrator. Takes as args the absolute accuracy,
 the max nb of evals"
-  (reify Integrable
+  (reify Integrator
     (integrate [_ f a b]
       (loop [N 1, I (init-i f a b), adjI (init-i f a b), i 1]
         (let [newI ((default-p :fn) f a b I N)
