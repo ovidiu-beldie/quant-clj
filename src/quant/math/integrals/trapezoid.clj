@@ -13,7 +13,7 @@
     [quant.common :only (half twice)]
     [incanter.core :only (abs)]))
 
-(defn default-integ [f a b I N]
+(defn- default-integ [f a b I N]
   (let [dx (/ (- b a) N)
         x-init (+ a (half dx))
         xs (iterate #(+ % dx) x-init)
@@ -22,7 +22,7 @@
                  (reduce + 0))]
     (half (+ I (* dx sum)))))
 
-(defn midpoint-integ [f a b I N]
+(defn- midpoint-integ [f a b I N]
   (let [dx (/ (- b a) N)
         x-init (+ a (/ dx 6))
         D (* 2 dx 1/3)
@@ -41,7 +41,7 @@
       (double 1/2)))
 
 ;; Integration policies
-(def default-p {:fn default-integ, :nb-ev 2})
-(def midpoint-p {:fn midpoint-integ, :nb-ev 3})
+(def ^:private default-p {:fn default-integ, :nb-ev 2})
+(def ^:private midpoint-p {:fn midpoint-integ, :nb-ev 3})
 (def integ-policy {:default default-p, :midpoint midpoint-p})
 
