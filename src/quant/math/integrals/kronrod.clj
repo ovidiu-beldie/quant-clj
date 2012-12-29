@@ -19,10 +19,11 @@
 
 ;;; non-adaptive
 
-(defn points [i]
-  (["10-21" "43" "87"] i))
+(def points
+  "Nr of points to be used for integration."
+  ["10-21" "43" "87"])
 
-(defn formula-dispatch [nb-evals f hl center p]
+(defn- formula-dispatch [nb-evals f hl center p]
   nb-evals)
 
 (defmulti formula formula-dispatch)
@@ -45,7 +46,7 @@
     {:savfun savfun, :r-abs (* r-abs hl), :r-asc (* r-asc hl),
       :res (* r21 hl), :err err, :nb-ev nb-ev}))
         
-(defn loop-10-21 [f hl c x w21]
+(defn- loop-10-21 [f hl c x w21]
   (let [absc (map #(* hl %) x)
         fv1 (map #(f (+ c %)) absc)
         fv2 (map #(f (- c %)) absc)
@@ -56,7 +57,7 @@
      :r21 (reduce + (map * w21 fv)),
      :r-abs (reduce + (map * w21 abs-sum))}))
   
-(defn comp-resasc [l1 l2 m]
+(defn- comp-resasc [l1 l2 m]
   (let [sm (fn [v] (map #(- % m) v)) ;subst-mean
         sum (fn [{:keys [fv1 fv2]}] (map + (sm fv1) (sm fv2)))
         loop-term (fn [l w21] (map + w21 (sum l)))]
@@ -68,7 +69,7 @@
 (defmethod formula "87" [nb-ev f hl center {:keys [r43] :as p}]
   (form-higher-order nb-ev f hl center p w87a w87b 22 :r87 r43))
 
-(defn form-higer-order [nb-ev f hl c p wxxa wxxb wxxb-index res-key resxx-inf]
+(defn form-higer-order- [nb-ev f hl c p wxxa wxxb wxxb-index res-key resxx-inf]
   "helper function for 43 and 87 formulae"
   (let [rxx-init (* (wxxb wxxb-index) (f c))
         rxx (reduce + rxx-init (map * (p :savfun) wxxa))
@@ -87,7 +88,8 @@
 
 ;;; Generic helper fns
 
-(defn rescale-err [err {:keys [r-abs r-asc]}]
+(defn- rescale-err [err {:keys [r-abs r-asc]}]
+  "Rescale error"
   (let [scale (fn [e]
                 (if (every? #(not= % 0) [e r-asc])
                   (let [scale (pow (* 200 e (/ 1 r-asc)) 1.5)]
@@ -103,6 +105,8 @@
 (defn convergent? [abs-acc rel-acc {:keys [err res]}]
   (or (< err abs-acc)
       (< err (* rel-acc (abs res)))))
+
+
 
 ;;; adaptive
 
