@@ -14,7 +14,8 @@
         [incanter.core :only (sqrt abs)]
         [quant.math.matrix :only (matrix, set-main-diag)]))
 
-(declare tqr-eigen-decomposition, make-ev, eigen-decomp-iter, comp-q, off-diag-zero?)
+(declare tqr-eigen-decomposition, make-ev, eigen-decomp-iter, comp-q, off-diag-zero?,
+         qr-transform, qr-transf-iter)
 
 (def eigen-vector-calculation #{:with-eigen-vector
                                 :without-eigen-vector
@@ -52,35 +53,7 @@
           ev1 (assoc-column ev col-i-1 (dec i))]
       (assoc-column ev1 col-i i))))
 
-(defn qr-transf-iter [i {:keys [e ev sine cosine d u q l]}]
-  "Implements an iteration of the QR transformation"
-  (let [dec-i (dec i)
-        h (* cosine (e i))
-        p (* sine (e i))
-        e1 (assoc e dec-i (sqrt (+ (sqr p) (sqr q))))]
-    (if (not (zero? (e1 dec-i)))
-      (let [sine (/ p (e1 dec-i))
-            cosine (/ q (e1 dec-i))
-            g (- (d dec-i) u)
-            t (+  (* (- (d i) g) sine) 
-                  (* 2 cosine h))
-            u1 (* sine t)
-            d1 (assoc d dec-i (+ g u1))
-            q1 (- (* cosine t) h)
-            ev1 (update-ev ev i sine cosine)]
-        {:recov-underflow false, :sine sine, :cosine cosine, :d d1, :u u1, :e e1, :ev ev1 :q q1, :l l})
-      (let [d1 (assoc d (dec i) (- u))
-            e1 (assoc e l 0)]
-        ;don't need the other params because will exit the loop
-        {:recov-underflow true, :d d1, :e e1, :ev ev}))))
 
-
-(defn qr-transform [eigen, e-init, k l q-init]
-  (loop [i (inc l), arg (assoc eigen :e e-init, :sine 1, :cosine 1, :u 0, :q q-init, :recov-underflow false, :l l)]
-    (if (or (> i k) (arg :recover-underflow))
-      (dissoc arg :sine :cosine)
-      (let [res (qr-transf-iter i arg)]
-        (recur (inc i), res)))))
 
 (defn sort-eigens [{:keys [ev d]}]
   (if (not (coll? ev))
@@ -102,11 +75,12 @@
     (let [n (count diag)
           ev-init (make-ev diag calc)
           e-init (vec (cons 0 sub))
-          loop-res  (loop [k (dec (count diag)), eigen {:ev ev-init, :d diag, :iter 0}, e e-init]
-                      (if (= k 0)
-                        eigen
-                        (let [res (eigen-decomp-iter eigen e k n strat)]
-                          (recur (dec k) (res :eigen) (res :e)))))]
+          decomp (fn [k eigen e]
+                   (if (zero? k)
+                     eigen
+                     (let [res (eigen-decomp-iter eigen e k n strat)]
+                       (recur (dec k) (:eigen res) (:e res)))))
+          loop-res (decomp (dec (count diag)) {:ev ev-init, :d diag, :iter 0} e-init)]
       (assoc (sort-eigens loop-res) :iter (loop-res :iter)))))
 
 (defn- make-ev [d calc]
@@ -120,27 +94,26 @@
       (let [m (matrix nb-rows (count d) (repeat 0))]
         (set-main-diag m (repeat 1))))))
 
-(defn- eigen-decomp-iter [eigen-init e-init k n strat]
-  (loop [eigen eigen-init, e e-init]
-    (if (off-diag-zero? k (eigen :d) e)
-      {:eigen eigen, :e e}
-      (let [comp-l (fn [k e]
-                     (if (or (zero? k)
-                             (off-diag-zero? k (eigen :d) e))
-                       k
-                       (recur (dec k) e)))
-            l (comp-l (dec k) e)
-            q (comp-q (eigen :d) e k l n strat)
-            qr-tr (qr-transform eigen e k l q)
-            not-recov-underflow (not (qr-tr :recover-underflow))
-            d1 (if not-recov-underflow
-                 (assoc (qr-tr :d) k (- ((qr-tr :d) k) (qr-tr :u)))
-                 (qr-tr :d))
-            e1 (if not-recov-underflow
-                 (assoc (qr-tr :e) k (qr-tr :q), l 0)
-                 (qr-tr :e))
-            new-iter (inc (eigen :iter))]
-        (recur {:iter new-iter, :d d1, :ev (qr-tr :ev)} e1)))))
+(defn- eigen-decomp-iter [eigen e k n strat]
+  (if (off-diag-zero? k (eigen :d) e)
+    {:eigen eigen, :e e}
+    (let [comp-l (fn [k e]
+                   (if (or (zero? k)
+                           (off-diag-zero? k (eigen :d) e))
+                     k
+                     (recur (dec k) e)))
+          l (comp-l (dec k) e)
+          q (comp-q (eigen :d) e k l n strat)
+          qr-tr (qr-transform eigen e k l q)
+          not-recov-underflow (not (qr-tr :recover-underflow))
+          d1 (if not-recov-underflow
+               (assoc (qr-tr :d) k (- ((qr-tr :d) k) (qr-tr :u)))
+               (qr-tr :d))
+          e1 (if not-recov-underflow
+               (assoc (qr-tr :e) k (qr-tr :q), l 0)
+               (qr-tr :e))
+          new-iter (inc (eigen :iter))]
+      (recur {:iter new-iter, :d d1, :ev (qr-tr :ev)} e1 k n strat))))
 
 (defn off-diag-zero? [k d e]
   (let [a (+ (abs (d k))
@@ -166,3 +139,42 @@
           (- q (* 1.25 lambda))
           (- q lambda))))
     (d l)))
+
+(defn qr-transform
+  ([{:keys [ev d]} e k l q]
+     (let [arg {:e e, :ev ev, :sine 1, :cosine 1, :d d, :u 0, :q q, :l l, :recov-undeflow false}]
+      (qr-transform k (inc l) arg)))
+  ([k i {:keys [e ev sine cosine d u q l recov-underflow] :as arg}]
+     (if (or (> i k) recov-underflow)
+       (dissoc arg :sine :cosine)
+       (recur k (inc i) (qr-transf-iter i arg)))))
+
+(defn qr-transf-iter [i {:keys [e ev sine cosine d u q l]}]
+  "Implements an iteration of the QR transformation"
+  (let [di (dec i)
+        h (* cosine (e i))
+        p (* sine (e i))
+        e' (assoc e di (sqrt (+ (sqr p) (sqr q))))
+        e'di (e' di)]
+    (if (not (zero? e'di))
+      (let [sine' (/ p e'di)
+            cosine' (/ q e'di)
+            g (- (d di) u)
+            t (+  (* (- (d i) g) sine')
+                  (* 2 cosine' h))
+            u' (* sine' t)]
+        {:recov-underflow false
+         :sine sine'
+         :cosine cosine'
+         :d (assoc d di (+ g u'))
+         :u u'
+         :e e'
+         :ev (update-ev ev i sine' cosine')
+         :q (- (* cosine' t) h)
+         :l l})
+      ;don't need the other params because will exit the loop
+      {:recov-underflow true
+       :d (assoc d di (- u))
+       :e (assoc e l 0)
+       :ev ev})))
+
