@@ -9,18 +9,19 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.math.matrix-utilities.tqr-eigen-decomposition
-  (:use [quant.math.matrix :only (column assoc-column)]
+  (:use [quant.common :only (sqr half)]
+        [quant.math.matrix :only (column assoc-column)]
         [incanter.core :only (sqrt abs)]
         [quant.math.matrix :only (matrix, set-main-diag)]))
 
-(declare tqr-eigen-decomposition)
+(declare tqr-eigen-decomposition make-ev eigen-decomp-iter comp-q)
 
-(def eigen-vector-calculation #{:with-eigen-vector :without-eigen-vector :only-first-row-eigen-vector})
+(def eigen-vector-calculation #{:with-eigen-vector
+                                :without-eigen-vector
+                                :only-first-row-eigen-vector})
 (def shift-strategy #{:no-shift :over-relaxation :close-eigen-value})
 
 (defstruct eigen-decomp :d :ev :iter)
-
-(defn sqr [x] (* x x))
 
 (defn tqr-eigen-decomp 
   ([diag sub]
@@ -39,7 +40,7 @@
   
 (defn update-ev [ev i sine cosine]
   "Implements the loop which updates the ev matrix
-   as partof the QR transformation"
+   as part of the QR transformation"
   ; ev may be a matrix or a scalar
   (if (not (coll? ev))
     ev
@@ -81,28 +82,51 @@
       (let [res (qr-transf-iter i arg)]
         (recur (inc i), res)))))
         
-(defn comp-q [d e k l n strat]
-  (let [q (d l)]
-    (if (not (= strat :no-shift))
-      (let [t1 (sqrt (+ (* 0.25 (+ (sqr (d k)) (sqr (d (dec k)))))
-                        (* (- 0.5) (d (dec k)) (d k))
-                        (sqr (e k))))
-            t2 (* 0.5 (+ (d k) (d (dec k))))
-            lambda (if (< (abs (- (+ t2 t1) (d k))) (abs (- t2 t1 (d k))))
-                     (+ t2 t1)
-                     (- t2 t1))]
-        (if (= strat :close-eigen-value)
-          (- q lambda)
-          (if (= k (dec n))
-            (- q (* 1.25 lambda))
-            (- q (* 1 lambda)))))
-      q)))
+
 
 (defn off-diag-zero? [k d e]
   (=  (+ (abs (d (dec k))) (abs (d k)))
       (+ (abs (d (dec k))) (abs (d k)) (abs (e k)))))
 
-(defn eigen-decomp-iter [eigen-init e-init k n strat]
+(defn sort-eigens [{:keys [ev d]}]
+  (if (not (coll? ev))
+    {:d d, :ev ev}
+    (let [pairs (map vector d ev) 
+          sorted-pairs (sort pairs)
+          d1 (map first sorted-pairs)
+          sign (fn [x] (if (< x 0) -1 1))
+          mult-sign-of-first (fn [coll]
+                               (let [s (sign (first coll))]
+                                 (map #(* s %) coll)))
+          sorted-ev (map second sorted-pairs)]
+      { :d (vec (map first sorted-pairs))
+        :ev (vec (map mult-sign-of-first sorted-ev))})))
+
+(defn tqr-eigen-decomposition [diag sub calc strat]
+  (if (not= (count diag) (inc (count sub)))
+    (throw (IllegalArgumentException. "Wrong dimensions"))
+    (let [n (count diag)
+          ev-init (make-ev diag calc)
+          e-init (vec (cons 0 sub))
+          loop-res  (loop [k (dec (count diag)), eigen {:ev ev-init, :d diag, :iter 0}, e e-init]
+                      (if (= k 0)
+                        eigen
+                        (let [res (eigen-decomp-iter eigen e k n strat)]
+                          (recur (dec k) (res :eigen) (res :e)))))]
+      (assoc (sort-eigens loop-res) :iter (loop-res :iter)))))
+
+(defn- make-ev [d calc]
+  "Creates the ev matrix. Args are the diagonal and the calculation method"
+  (let [nb-rows-map {:with-eigen-vector (count d),
+                     :without-eigen-vector 0,
+                     :only-first-row-eigen-vector 1}
+        nb-rows (nb-rows-map calc)]
+    (if (zero? nb-rows)
+      0
+      (let [m (matrix nb-rows (count d) (repeat 0))]
+        (set-main-diag m (repeat 1))))))
+
+(defn- eigen-decomp-iter [eigen-init e-init k n strat]
   (do
   (loop [eigen eigen-init, e e-init]
     (if (off-diag-zero? k (eigen :d) e)
@@ -123,42 +147,24 @@
                  (assoc (qr-tr :e) k (qr-tr :q), l 0)
                  (qr-tr :e))
             new-iter (inc (eigen :iter))]
-         (recur {:iter new-iter, :d d1, :ev (qr-tr :ev)} e1))))))    
-      
-  
-(defn sort-eigens [{:keys [ev d]}]
-  (if (not (coll? ev))
-    {:d d, :ev ev}
-    (let [pairs (map vector d ev) 
-          sorted-pairs (sort pairs)
-          d1 (map first sorted-pairs)
-          sign (fn [x] (if (< x 0) -1 1))
-          mult-sign-of-first (fn [coll]
-                               (let [s (sign (first coll))]
-                                 (map #(* s %) coll)))
-          sorted-ev (map second sorted-pairs)]
-      { :d (vec (map first sorted-pairs))
-        :ev (vec (map mult-sign-of-first sorted-ev))})))
+        (recur {:iter new-iter, :d d1, :ev (qr-tr :ev)} e1))))))
 
-(defn make-ev [d calc]
-  (let [nb-rows-map {:with-eigen-vector (count d), :without-eigen-vector 0, :only-first-row-eigen-vector 1}
-        nb-rows (nb-rows-map calc)]
-    (if (zero? nb-rows)
-      0
-      (let [m (matrix nb-rows (count d) (repeat 0))]
-        (set-main-diag m (repeat 1))))))
-
-(defn tqr-eigen-decomposition [diag sub calc strat]
-  (if (not (= (count diag) (inc (count sub))))
-    (throw (IllegalArgumentException. "Wrong dimensions"))
-    (let [n (count diag)
-          ev-init (make-ev diag calc)
-          e-init (vec (cons 0 sub))
-          loop-res  (loop [k (dec (count diag)), eigen {:ev ev-init, :d diag, :iter 0}, e e-init]
-                      (if (= k 0)
-                        eigen
-                        (let [res (eigen-decomp-iter eigen e k n strat)]
-                          (recur (dec k) (res :eigen) (res :e)))))]
-      (assoc (sort-eigens loop-res) :iter (loop-res :iter)))))
-  
-
+(defn comp-q [d e k l n strat]
+  (if (not= strat :no-shift)
+    (let [dk (d k)
+          d-dec-k (d (dec k))
+          t1 (sqrt (+ (* 0.25 (+ (sqr dk) (sqr d-dec-k)))
+                      (* -0.5 d-dec-k dk)
+                      (sqr (e k))))
+          t2 (half (+ dk d-dec-k))
+          lambda (if (< (abs (- (+ t2 t1) dk))
+                        (abs (- t2 t1 dk)))
+                   (+ t2 t1)
+                   (- t2 t1))
+          q (d l)]
+      (if (= strat :close-eigen-value)
+        (- q lambda)
+        (if (= k (dec n))
+          (- q (* 1.25 lambda))
+          (- q lambda))))
+    (d l)))
