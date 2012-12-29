@@ -14,7 +14,7 @@
         [incanter.core :only (sqrt abs)]
         [quant.math.matrix :only (matrix, set-main-diag)]))
 
-(declare tqr-eigen-decomposition make-ev eigen-decomp-iter comp-q)
+(declare tqr-eigen-decomposition, make-ev, eigen-decomp-iter, comp-q, off-diag-zero?)
 
 (def eigen-vector-calculation #{:with-eigen-vector
                                 :without-eigen-vector
@@ -81,12 +81,6 @@
       (dissoc arg :sine :cosine)
       (let [res (qr-transf-iter i arg)]
         (recur (inc i), res)))))
-        
-
-
-(defn off-diag-zero? [k d e]
-  (=  (+ (abs (d (dec k))) (abs (d k)))
-      (+ (abs (d (dec k))) (abs (d k)) (abs (e k)))))
 
 (defn sort-eigens [{:keys [ev d]}]
   (if (not (coll? ev))
@@ -127,16 +121,15 @@
         (set-main-diag m (repeat 1))))))
 
 (defn- eigen-decomp-iter [eigen-init e-init k n strat]
-  (do
   (loop [eigen eigen-init, e e-init]
     (if (off-diag-zero? k (eigen :d) e)
       {:eigen eigen, :e e}
       (let [comp-l (fn [k e]
-                     (loop [l (dec k)]
-                       (if (or (zero? l) (off-diag-zero? l (eigen :d) e))
-                         l
-                         (recur (dec l)))))
-            l (comp-l k e)
+                     (if (or (zero? k)
+                             (off-diag-zero? k (eigen :d) e))
+                       k
+                       (recur (dec k) e)))
+            l (comp-l (dec k) e)
             q (comp-q (eigen :d) e k l n strat)
             qr-tr (qr-transform eigen e k l q)
             not-recov-underflow (not (qr-tr :recover-underflow))
@@ -147,16 +140,21 @@
                  (assoc (qr-tr :e) k (qr-tr :q), l 0)
                  (qr-tr :e))
             new-iter (inc (eigen :iter))]
-        (recur {:iter new-iter, :d d1, :ev (qr-tr :ev)} e1))))))
+        (recur {:iter new-iter, :d d1, :ev (qr-tr :ev)} e1)))))
+
+(defn off-diag-zero? [k d e]
+  (let [a (+ (abs (d k))
+             (abs (d (dec k))))]
+    (= a (+ a (abs (e k))))))
 
 (defn comp-q [d e k l n strat]
   (if (not= strat :no-shift)
     (let [dk (d k)
-          d-dec-k (d (dec k))
-          t1 (sqrt (+ (* 0.25 (+ (sqr dk) (sqr d-dec-k)))
-                      (* -0.5 d-dec-k dk)
+          ddk (d (dec k))
+          t1 (sqrt (+ (* 0.25 (+ (sqr dk) (sqr ddk)))
+                      (* -0.5 ddk dk)
                       (sqr (e k))))
-          t2 (half (+ dk d-dec-k))
+          t2 (half (+ dk ddk))
           lambda (if (< (abs (- (+ t2 t1) dk))
                         (abs (- t2 t1 dk)))
                    (+ t2 t1)
