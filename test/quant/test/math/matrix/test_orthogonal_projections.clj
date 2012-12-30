@@ -33,7 +33,7 @@
 
 (defn test1 []
   (let [pred-rows (fn[i j]
-               (and ((projector :valid-v) j) (not (= i j))))
+               (and ((projector :vv) j) (not (= i j))))
         comp-dot-prod (fn [r1 r2]
                         (reduce + (map * r1 r2)))
         pred-prods (fn [p]
@@ -41,14 +41,14 @@
     (loop [i 0, nb-errors 0]
       (if (= i nb-vecs)
         nb-errors
-        (if ((projector :valid-v) i)
+        (if ((projector :vv) i)
           (let [filtered-test-m (for [row ordered-test-matrix :when (pred-rows i (second row))] (first row))
                 dot-prods (map (partial comp-dot-prod ((projector :vectors) i)) filtered-test-m)]
             (recur (inc i) (+ nb-errors (count (filter pred-prods dot-prods)))))
           (recur (inc i) nb-errors))))))
 
 (defn test2 []
-  (let [pred-rows (fn [i] ((projector :valid-v) i))
+  (let [pred-rows (fn [i] ((projector :vv) i))
         filtered-test-m (for [row ordered-test-matrix :when (pred-rows (second row))] (first row))
         ordered-vecs (map vector (projector :vectors) (range))
         filtered-vecs (for [row ordered-vecs :when (pred-rows (second row))] (first row))
