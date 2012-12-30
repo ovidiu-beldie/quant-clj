@@ -53,8 +53,11 @@
     (vector? (first m))
     false))
 
-(defn inner-prod [v1 v2]
-  (reduce + (map * v1 v2)))
+(defn inner-prod
+  ([v1 v2]
+     (inner-prod v1 v2 0))
+  ([v1 v2 init]
+     (reduce + init (map * v1 v2))))
 
 (defn multiply-matrices [x y]
   (if (not (= (count-cols x) (count-rows y)))
