@@ -10,11 +10,12 @@
 
 (ns quant.test.math.integrals.test-integrator
   (:use
-    [incanter.core :only (sin cos)]
-    [quant.math.integrals.core]
-    [quant.common :only (sqr twice)]
-    [clojure.algo.generic.math-functions :only (approx=)]
-    [clojure.test :only (deftest, is, testing)]))
+   [quant.test.common :only (with-private-fns)]
+   [incanter.core :only (sin cos)]
+   [quant.math.integrals.core]
+   [quant.common :only (sqr twice)]
+   [clojure.algo.generic.math-functions :only (approx=)]
+   [clojure.test :only (deftest, is, testing)]))
 
 (def pi Math/PI)
 (def tol 1.0e-6)  ;tolerance
@@ -24,11 +25,6 @@
 (def in-segment              (partial integrate (segment max-iter)))
 (def in-kronrod-adaptive     (partial integrate (kronrod-adaptive tol 1000)))
 (def in-kronrod-non-adaptive (partial integrate (kronrod-non-adaptive tol 100 tol)))
-
-(defmacro with-private-fns [[ns fns] & tests]
-  "Refers private fns from ns and runs tests in context."
-  `(let ~(reduce #(conj %1 %2 `(ns-resolve '~ns '~%2)) [] fns)
-     ~@tests))
 
 (with-private-fns [quant.math.integrals.trapezoid [default-integ]]
  (deftest test-default-integ
