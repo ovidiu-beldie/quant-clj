@@ -40,23 +40,20 @@ Args are: original vecs, multiplier cutoff and tolerance"
                       arg)]
         (recur (inc j), new-arg, (conj projected-vecs (new-arg :curr-v))))))))
 
-(defn- handle-valid-v [{:keys [orig-v ortho-norm-v vv curr-v m-cutoff] :as arg} j]
-  (let [res (onb-loop arg j) ;ortho-normal-basis-loop
+(defn- handle-valid-v [{:keys [orig-v ortho-norm-v vv curr-v m-cutoff tol] :as arg} j]
+  (let [num-vecs (count-rows orig-v)
+        onbi (partial onb-iter orig-v tol j)
+        onb-loop (fn [k vecs]
+                     (if (= k num-vecs)
+                       vecs
+                       (recur (inc k) (onbi (:onv vecs) (:vv vecs) k))))
+        res (onb-loop 0 {:onv ortho-norm-v, :vv vv})
         onv (update-onv (res :onv) (res :vv) (dec (count-rows orig-v)) j :type-2)
         proj-on-orig-dir (inner-prod (orig-v j) (onv j))
         size-muliplier (/ (norm-squared orig-v j) proj-on-orig-dir)]
     (if (< (abs size-muliplier) m-cutoff)
       (assoc arg :ortho-norm-v onv, :vv vv, :curr-v (map #(* % size-muliplier) (onv j)))
       (assoc arg :ortho-norm-v onv, :vv (assoc vv j false), :curr-v curr-v))))
-
-(defn- onb-loop [{:keys [orig-v vv ortho-norm-v tol]} j]
-  "Args are: original vec, valid vec, ortho-normalized vec, tolerance and j"
-  (let [num-vecs (count-rows orig-v)
-        onbi (partial onb-iter orig-v tol j)] ;ortho-normal-basis-iter
-    (loop [k 0, vecs {:vv vv, :onv ortho-norm-v}]
-      (if (= k num-vecs)
-        vecs
-        (recur (inc k) (onbi (vecs :onv) (vecs :vv) k))))))
 
 (defn- onb-iter [ov tol j onv vv k]
   "Args are: original vec, tolerance, j, ortho-normalized vec, valid vec, k"
