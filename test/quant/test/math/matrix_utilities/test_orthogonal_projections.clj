@@ -11,7 +11,7 @@
 (ns quant.test.math.matrix-utilities.test-orthogonal-projections
   (:use 
     [quant.math.matrix-utilities.orthogonal-projections]
-    [quant.math.matrix :only (matrix)]
+    [quant.math.matrix-utilities.core :only (matrix)]
     [clojure.test :only (deftest, deftest, is, testing)]
     [clojure.algo.generic.math-functions :only (approx=)]
     [incanter.core :only (abs)])

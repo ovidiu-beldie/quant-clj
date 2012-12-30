@@ -11,9 +11,9 @@
 (ns quant.test.math.matrix-utilities.test-tqr-eigen-decomposition
   (:use
    [quant.test.common :only (with-private-fns)]
-    [quant.math.matrix-utilities.tqr-eigen-decomposition]
-    [clojure.algo.generic.math-functions :only (approx=)]
-    [clojure.test :only (deftest, deftest, is, testing)]))
+   [quant.math.matrix-utilities.tqr-eigen-decomposition]
+   [clojure.algo.generic.math-functions :only (approx=)]
+   [clojure.test :only (deftest, is, testing)]))
 
 (def tol 1.0E-10)
 

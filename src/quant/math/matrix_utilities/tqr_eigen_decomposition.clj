@@ -10,9 +10,8 @@
 
 (ns quant.math.matrix-utilities.tqr-eigen-decomposition
   (:use [quant.common :only (sqr half)]
-        [quant.math.matrix :only (column assoc-column)]
-        [incanter.core :only (sqrt abs)]
-        [quant.math.matrix :only (matrix, set-main-diag)]))
+        [quant.math.matrix-utilities.core :only (matrix column assoc-column set-main-diag)]
+        [incanter.core :only (sqrt abs)]))
 
 (declare tqr-eigen-decomp-impl, make-ev, eigen-decomp-iter, comp-q, off-diag-zero?,
          qr-transform, qr-transf-iter, update-ev, sort-eigens)

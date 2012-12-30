@@ -9,7 +9,8 @@
 ; referenced in this library are the propriety of their respective owners
 
 (ns quant.math.matrix-utilities.symmetric-schur-decomposition
-  (:use [quant.math.matrix :only (count-rows, count-cols, get-main-diag, transpose, matrix, set-main-diag)]
+  (:use [quant.math.matrix-utilities.core
+         :only (count-rows, count-cols, get-main-diag, transpose, matrix, set-main-diag)]
         [incanter.core :only (abs, sqrt)]))
 
 (def max-iter 100)

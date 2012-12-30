@@ -8,7 +8,7 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.math.matrix)
+(ns quant.math.matrix-utilities.core)
 
 (defn matrix [rows cols vals]
   "Creates a matrix with the number of rows
