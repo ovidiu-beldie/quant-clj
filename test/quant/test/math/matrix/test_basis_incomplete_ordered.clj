@@ -13,6 +13,6 @@
     [quant.math.matrix.basis-incomplete-ordered]
     [clojure.test :only (deftest, deftest, is, testing)]))
 
-(deftest test-basic-incomplete-ordered
-  (is (= 11 (:euclidean-dim (basic-incomplete-ordered 11))))
-  (is (= [] (:current-basis (basic-incomplete-ordered 11)))))
+(deftest test-basis-incomplete-ordered
+  (is (= 11 (:euclid-dim (basis-incomplete-ordered 11))))
+  (is (= [] (:curr-basis (basis-incomplete-ordered 11)))))

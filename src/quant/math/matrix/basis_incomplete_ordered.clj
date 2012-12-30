@@ -8,35 +8,32 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.math.matrix.basis-incomplete-ordered)
+(ns quant.math.matrix.basis-incomplete-ordered
+  (:use [quant.math.matrix.core :only (inner-prod)]))
 
-(defstruct basis-incomplete-ordered :current-basis :euclidean-dim)
+(def tol 1e-12)
 
-(def tolerance 1e-12)
+(defn basis-incomplete-ordered [euclidean-dim]
+  "Creates a basis incomplete ordered obj with the provided euclidean dim and
+with no vectors"
+  {:euclid-dim euclidean-dim :curr-basis []})
 
-(defn basic-incomplete-ordered [euclidean-dim]
-  (struct basis-incomplete-ordered [] euclidean-dim))
-
-(defn add-vector-invariants-ok? [bio v]
-  (if (not (= (count v) (bio :euclidean-dim)))
-    (throw (IllegalArgumentException. "invalid vector size"))
-    (not (= (count (bio ::current-basis)) (bio :euclidean-dim)))))
-
-(defn inner-product [c1 c2 init]
-  (reduce init + (map * c1 c2)))
-
-(defn add-vector [bio v]
-  (if (not (add-vector-invariants-ok? bio v))
+(defn add-vector [{:keys [euclid-dim curr-basis] :as bio} v]
+  "Adds a vector (2nd arg) to a basis incomplete ordered (1st arg)"
+  (if (not (add-vector-valid? bio v))
     bio
-    (let [curr-basis (bio :current-basis)
-          inner-prods (map #(inner-product % v 0) curr-basis)
+    (let [inner-prods (map #(inner-prod % v 0) curr-basis)
           new-v-elem (fn [ip cb init]
                          (reduce init - (map #(* ip %) cb)))
           new-v (map new-v-elem inner-prods curr-basis v)
-          norm (inner-product new-v new-v 0)]
-      (if (< norm tolerance)
+          norm (inner-prod new-v new-v 0)
+          upd-fn (fn [cb] (conj cb (map #(/ % norm) new-v)))]
+      (if (< norm tol)
         bio
-        (assoc bio :current-basis (conj curr-basis (map #(/ % norm) new-v)))))))
+        (update-in bio [:curr-basis] upd-fn)))))
           
-    
+(defn- add-vector-valid? [{:keys [euclid-dim curr-basis]} v]
+  (if (not= (count v) euclid-dim)
+    (throw (IllegalArgumentException. "invalid vector size"))
+    (not= (count curr-basis) euclid-dim)))
 
