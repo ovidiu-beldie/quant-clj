@@ -14,7 +14,7 @@
 
 (declare handle-valid-v update-onv onb-loop onb-iter)
 
-(defstruct orthog-proj-args :orig-v :ortho-norm-v :vv :tol :m-cutoff :curr-v)
+(defstruct orthog-proj-args :ov :onv :vv :tol :m-cutoff :curr-v)
 
 (defn norm-squared [m r]
   (inner-prod (m r) (m r)))
@@ -22,16 +22,16 @@
 (defn norm [m r]
   (sqrt (norm-squared m r)))
 
-(defn orthogonal-projections [orig-v m-cutoff tol]
+(defn orthogonal-projections [ov m-cutoff tol]
   "Performs the orthogonal projections algo on a collection of vectors.
 Args are: original vecs, multiplier cutoff and tolerance"
-  (let [hvc (partial handle-valid-v orig-v)
-        dim (count-cols orig-v)
-        nr-vecs (count-rows orig-v)
-        ortho-norm-v (matrix nr-vecs dim (repeat 0))
+  (let [hvc (partial handle-valid-v ov)
+        dim (count-cols ov)
+        nr-vecs (count-rows ov)
+        onv (matrix nr-vecs dim (repeat 0))
         vv (vec (repeat nr-vecs true))
         curr-v (repeat dim 0)
-        init-arg (struct orthog-proj-args orig-v ortho-norm-v vv tol m-cutoff curr-v)]
+        init-arg (struct orthog-proj-args ov onv vv tol m-cutoff curr-v)]
   (loop [j 0, arg init-arg, projected-vecs []]
     (if (= j nr-vecs)
       {:vectors projected-vecs :vv (arg :vv)}
@@ -40,22 +40,22 @@ Args are: original vecs, multiplier cutoff and tolerance"
                       arg)]
         (recur (inc j), new-arg, (conj projected-vecs (new-arg :curr-v))))))))
 
-(defn- handle-valid-v [{:keys [orig-v ortho-norm-v vv curr-v m-cutoff tol] :as arg} j]
-  (let [num-vecs (count-rows orig-v)
-        onbi (partial onb-iter orig-v tol j)
+(defn- handle-valid-v [{:keys [ov onv vv curr-v m-cutoff tol] :as arg} j]
+  (let [num-vecs (count-rows ov)
+        onbi (partial onb-iter ov tol j)
         onb-loop (fn [k vecs]
                      (if (= k num-vecs)
                        vecs
-                       (recur (inc k) (onbi (:onv vecs) (:vv vecs) k))))
-        res (onb-loop 0 {:onv ortho-norm-v, :vv vv})
-        onv (update-onv (res :onv) (res :vv) (dec (count-rows orig-v)) j :type-2)
-        proj-on-orig-dir (inner-prod (orig-v j) (onv j))
-        size-muliplier (/ (norm-squared orig-v j) proj-on-orig-dir)]
+                       (recur (inc k) (onbi k vecs))))
+        r (onb-loop 0 {:onv onv, :vv vv})
+        onv' (update-onv (:onv r) (:vv r) (dec (count-rows ov)) j :type-2)
+        proj-on-orig-dir (inner-prod (ov j) (onv' j))
+        size-muliplier (/ (norm-squared ov j) proj-on-orig-dir)]
     (if (< (abs size-muliplier) m-cutoff)
-      (assoc arg :ortho-norm-v onv, :vv vv, :curr-v (map #(* % size-muliplier) (onv j)))
-      (assoc arg :ortho-norm-v onv, :vv (assoc vv j false), :curr-v curr-v))))
+      (assoc arg :onv onv', :vv vv, :curr-v (map #(* % size-muliplier) (onv' j)))
+      (assoc arg :onv onv', :vv (assoc vv j false), :curr-v curr-v))))
 
-(defn- onb-iter [ov tol j onv vv k]
+(defn- onb-iter [ov tol j k {:keys [onv vv]}]
   "Args are: original vec, tolerance, j, ortho-normalized vec, valid vec, k"
   (let [onv' (assoc onv k (ov k))]
     (if (and (not= k j) (vv k))
