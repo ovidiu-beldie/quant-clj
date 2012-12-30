@@ -96,7 +96,7 @@
     (is (= (double 5) (beta (laguerre 0.5) 2))))
 
   (testing "Hermite"
-    (is (= 7/2 (beta (hermite 2) 3)))
+    (is (== 7/2 (beta (hermite 2) 3)))
     (is (= 4 (beta (hermite 1) 8))))
 
   (testing "Jacobi"

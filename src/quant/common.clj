@@ -17,5 +17,5 @@
   (try
     (if (even? x)
       (bit-shift-right x 1)
-      (/ x 2))
-    (catch Exception e (/ x 2))))
+      (* x 0.5))
+    (catch Exception e (* x 0.5))))

@@ -28,8 +28,8 @@
 
 (with-private-fns [quant.math.integrals.trapezoid [default-integ]]
  (deftest test-default-integ
-   (is (= 31/2 (default-integ #(twice %) 2 5 10 2)))
-   (is (= 1915 (default-integ #(inc %) 50 100 30 3)))))
+   (is (== 31/2 (default-integ #(twice %) 2 5 10 2)))
+   (is (approx= 1915 (default-integ #(inc %) 50 100 30 3) tol))))
 (with-private-fns [quant.math.integrals.trapezoid [midpoint-integ]]
  (deftest test-midpoint-integ
    (is (= 52/3 (midpoint-integ #(twice %) 2 5 10 2)))
