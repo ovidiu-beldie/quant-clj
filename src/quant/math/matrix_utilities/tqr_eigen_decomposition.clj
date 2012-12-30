@@ -14,15 +14,15 @@
         [incanter.core :only (sqrt abs)]
         [quant.math.matrix :only (matrix, set-main-diag)]))
 
-(declare tqr-eigen-decomposition, make-ev, eigen-decomp-iter, comp-q, off-diag-zero?,
-         qr-transform, qr-transf-iter)
+(declare tqr-eigen-decomp-impl, make-ev, eigen-decomp-iter, comp-q, off-diag-zero?,
+         qr-transform, qr-transf-iter, update-ev, sort-eigens)
 
 (def eigen-vector-calculation #{:with-eigen-vector
                                 :without-eigen-vector
                                 :only-first-row-eigen-vector})
 (def shift-strategy #{:no-shift :over-relaxation :close-eigen-value})
 
-(defstruct eigen-decomp :d :ev :iter)
+;(defstruct eigen-decomp :d :ev :iter)
 
 (defn tqr-eigen-decomp 
   ([diag sub]
@@ -30,46 +30,15 @@
   ([diag sub calc]
     (tqr-eigen-decomp diag sub calc :close-eigen-value))
   ([diag sub calc strategy]
-    (tqr-eigen-decomposition diag sub calc strategy)))
+    (tqr-eigen-decomp-impl diag sub calc strategy)))
 
 (defn eigen-values [decomp]
   (decomp :d))
 
 (defn eigen-vectors [decomp]
   (decomp :ev))
-    
-  
-(defn update-ev [ev i sine cosine]
-  "Implements the loop which updates the ev matrix
-   as part of the QR transformation"
-  ; ev may be a matrix or a scalar
-  (if (not (coll? ev))
-    ev
-    (let [tmp (column ev (dec i))
-          f (fn [op a b x t]
-              (op (* a x) (* b t)))    
-          col-i-1 (map (partial f + sine cosine) (column ev i) tmp) 
-          col-i (map (partial f - cosine sine) (column ev i) tmp)
-          ev1 (assoc-column ev col-i-1 (dec i))]
-      (assoc-column ev1 col-i i))))
 
-
-
-(defn sort-eigens [{:keys [ev d]}]
-  (if (not (coll? ev))
-    {:d d, :ev ev}
-    (let [pairs (map vector d ev) 
-          sorted-pairs (sort pairs)
-          d1 (map first sorted-pairs)
-          sign (fn [x] (if (< x 0) -1 1))
-          mult-sign-of-first (fn [coll]
-                               (let [s (sign (first coll))]
-                                 (map #(* s %) coll)))
-          sorted-ev (map second sorted-pairs)]
-      { :d (vec (map first sorted-pairs))
-        :ev (vec (map mult-sign-of-first sorted-ev))})))
-
-(defn tqr-eigen-decomposition [diag sub calc strat]
+(defn tqr-eigen-decomp-impl [diag sub calc strat]
   (if (not= (count diag) (inc (count sub)))
     (throw (IllegalArgumentException. "Wrong dimensions"))
     (let [n (count diag)
@@ -115,12 +84,12 @@
           new-iter (inc (eigen :iter))]
       (recur {:iter new-iter, :d d1, :ev (qr-tr :ev)} e1 k n strat))))
 
-(defn off-diag-zero? [k d e]
+(defn- off-diag-zero? [k d e]
   (let [a (+ (abs (d k))
              (abs (d (dec k))))]
     (= a (+ a (abs (e k))))))
 
-(defn comp-q [d e k l n strat]
+(defn- comp-q [d e k l n strat]
   (if (not= strat :no-shift)
     (let [dk (d k)
           ddk (d (dec k))
@@ -140,7 +109,8 @@
           (- q lambda))))
     (d l)))
 
-(defn qr-transform
+(defn- qr-transform
+  "Implements the QR transformation"
   ([{:keys [ev d]} e k l q]
      (let [arg {:e e, :ev ev, :sine 1, :cosine 1, :d d, :u 0, :q q, :l l, :recov-undeflow false}]
       (qr-transform k (inc l) arg)))
@@ -149,7 +119,7 @@
        (dissoc arg :sine :cosine)
        (recur k (inc i) (qr-transf-iter i arg)))))
 
-(defn qr-transf-iter [i {:keys [e ev sine cosine d u q l]}]
+(defn- qr-transf-iter [i {:keys [e ev sine cosine d u q l]}]
   "Implements an iteration of the QR transformation"
   (let [di (dec i)
         h (* cosine (e i))
@@ -178,3 +148,30 @@
        :e (assoc e l 0)
        :ev ev})))
 
+(defn- sort-eigens [{:keys [ev d]}]
+  (if (not (coll? ev))
+    {:d d, :ev ev}
+    (let [pairs (map vector d ev)
+          sorted-pairs (sort pairs)
+          d1 (map first sorted-pairs)
+          sign (fn [x] (if (< x 0) -1 1))
+          mult-sign-of-first (fn [coll]
+                               (let [s (sign (first coll))]
+                                 (map #(* s %) coll)))
+          sorted-ev (map second sorted-pairs)]
+      { :d (vec (map first sorted-pairs))
+        :ev (vec (map mult-sign-of-first sorted-ev))})))
+
+(defn- update-ev [ev i sine cosine]
+  "Implements the loop which updates the ev matrix
+   as part of the QR transformation"
+  ; ev may be a matrix or a scalar
+  (if (not (coll? ev))
+    ev
+    (let [tmp (column ev (dec i))
+          f (fn [op a b x t]
+              (op (* a x) (* b t)))
+          col-i-1 (map (partial f + sine cosine) (column ev i) tmp)
+          col-i (map (partial f - cosine sine) (column ev i) tmp)
+          ev1 (assoc-column ev col-i-1 (dec i))]
+      (assoc-column ev1 col-i i))))
