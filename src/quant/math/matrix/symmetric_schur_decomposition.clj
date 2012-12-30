@@ -8,8 +8,8 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.math.matrix-utilities.symmetric-schur-decomposition
-  (:use [quant.math.matrix-utilities.core
+(ns quant.math.matrix.symmetric-schur-decomposition
+  (:use [quant.math.matrix.core
          :only (count-rows, count-cols, get-main-diag, transpose, matrix, set-main-diag)]
         [incanter.core :only (abs, sqrt)]))
 

@@ -8,10 +8,10 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.test.math.matrix-utilities.test-tqr-eigen-decomposition
+(ns quant.test.math.matrix.test-tqr-eigen-decomposition
   (:use
    [quant.test.common :only (with-private-fns)]
-   [quant.math.matrix-utilities.tqr-eigen-decomposition]
+   [quant.math.matrix.tqr-eigen-decomposition]
    [clojure.algo.generic.math-functions :only (approx=)]
    [clojure.test :only (deftest, is, testing)]))
 
@@ -23,12 +23,12 @@
 (def d [7 2 0 6 1 9 3 8 5])
 (def ev [[1 2 3 4] [5 6 7 8] [9 10 11 12] [13 14 15 16]])
 
-(with-private-fns [quant.math.matrix-utilities.tqr-eigen-decomposition [off-diag-zero?]]
+(with-private-fns [quant.math.matrix.tqr-eigen-decomposition [off-diag-zero?]]
  (deftest test-off-diag-zero?
    (is (true? (off-diag-zero? 1 d1 e1)))
    (is (false? (off-diag-zero? 6 d1 e1)))))
 
-(with-private-fns [quant.math.matrix-utilities.tqr-eigen-decomposition [comp-q]]
+(with-private-fns [quant.math.matrix.tqr-eigen-decomposition [comp-q]]
  (deftest test-comp-q
    (is (= 3      (comp-q d1 e2 6 3 7 :no-shift)))
    (is (approx= -62.50208  (comp-q d1 e2 6 3 7 :close-eigen-value) 0.0001))
@@ -37,11 +37,11 @@
 
 (def ev-result [[1 3.5 2.0 4] [5 9.5 4.0 8] [9 15.5 6.0 12] [13 21.5 8.0 16]])
 
-(with-private-fns [quant.math.matrix-utilities.tqr-eigen-decomposition [update-ev]]
+(with-private-fns [quant.math.matrix.tqr-eigen-decomposition [update-ev]]
  (deftest test-update-ev
    (is (= ev-result (update-ev ev 2 0.5 1)))))
 
-(with-private-fns [quant.math.matrix-utilities.tqr-eigen-decomposition [qr-transf-iter]]
+(with-private-fns [quant.math.matrix.tqr-eigen-decomposition [qr-transf-iter]]
  (def qti1 (qr-transf-iter 2 {:e e2, :ev ev, :sine 0.05, :cosine 0.025,
                               :d d, :u 0, :q 3, :l 1})))
 
@@ -57,7 +57,7 @@
   (is (= e2-qr-1 (:e qti1)))
   (is (approx= -0.2 (:q qti1) 0.0001)))
 
-(with-private-fns [quant.math.matrix-utilities.tqr-eigen-decomposition [qr-transf-iter]]
+(with-private-fns [quant.math.matrix.tqr-eigen-decomposition [qr-transf-iter]]
  (def qti2 (qr-transf-iter 2 {:e e1, :ev ev, :sine 0.05, :cosine 0.025,
                               :d d, :u 9, :q 0, :l 1})))
 (def d-qr-2 [7 -9 0 6 1 9 3 8 5])
@@ -71,7 +71,7 @@
 (def ev-sort [[-1 2 3 -4] [5 -6 7 8] [9 10 -11 -12] [-13 -14 15 16]])
 (def ev-sort-expect [[9 10 -11 -12] [1 -2 -3 4] [13 14 -15 -16] [5 -6 7 8]])
 
-(with-private-fns [quant.math.matrix-utilities.tqr-eigen-decomposition [sort-eigens]]
+(with-private-fns [quant.math.matrix.tqr-eigen-decomposition [sort-eigens]]
  (def call-sort-eigens (sort-eigens {:ev ev-sort, :d d-sort})))
 
 (deftest test-sort-eigens

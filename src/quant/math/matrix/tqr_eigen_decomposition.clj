@@ -8,9 +8,9 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.math.matrix-utilities.tqr-eigen-decomposition
+(ns quant.math.matrix.tqr-eigen-decomposition
   (:use [quant.common :only (sqr half)]
-        [quant.math.matrix-utilities.core :only (matrix column assoc-column set-main-diag)]
+        [quant.math.matrix.core :only (matrix column assoc-column set-main-diag)]
         [incanter.core :only (sqrt abs)]))
 
 (declare tqr-eigen-decomp-impl, make-ev, eigen-decomp-iter, comp-q, off-diag-zero?,

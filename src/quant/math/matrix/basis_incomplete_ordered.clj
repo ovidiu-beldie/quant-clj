@@ -8,7 +8,7 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.math.matrix-utilities.basis-incomplete-ordered)
+(ns quant.math.matrix.basis-incomplete-ordered)
 
 (defstruct basis-incomplete-ordered :current-basis :euclidean-dim)
 

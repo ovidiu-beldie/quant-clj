@@ -8,9 +8,9 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.test.math.matrix-utilities.test-symmetric-schur-decomposition
+(ns quant.test.math.matrix.test-symmetric-schur-decomposition
   (:use 
-    [quant.math.matrix-utilities.symmetric-schur-decomposition]
+    [quant.math.matrix.symmetric-schur-decomposition]
     [clojure.test :only (deftest, is, testing)]))
 
 (def null-matrix [])

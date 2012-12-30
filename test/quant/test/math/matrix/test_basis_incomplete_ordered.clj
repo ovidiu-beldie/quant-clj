@@ -8,9 +8,9 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.test.math.matrix-utilities.test-basis-incomplete-ordered
+(ns quant.test.math.matrix.test-basis-incomplete-ordered
   (:use 
-    [quant.math.matrix-utilities.basis-incomplete-ordered]
+    [quant.math.matrix.basis-incomplete-ordered]
     [clojure.test :only (deftest, deftest, is, testing)]))
 
 (deftest test-basic-incomplete-ordered

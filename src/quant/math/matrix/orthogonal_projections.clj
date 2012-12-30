@@ -8,8 +8,8 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.math.matrix-utilities.orthogonal-projections
-  (:use [quant.math.matrix-utilities.core :only (matrix transpose count-rows count-cols)]
+(ns quant.math.matrix.orthogonal-projections
+  (:use [quant.math.matrix.core :only (matrix transpose count-rows count-cols)]
         [incanter.core :only (sqrt abs)]))
 
 (defstruct orthog-proj-args :orig-vecs :ortho-norm-vecs :valid-vecs :tolerance :multiplier-cutoff :curr-vec)

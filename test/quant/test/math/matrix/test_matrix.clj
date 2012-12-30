@@ -8,9 +8,9 @@
 ; The initial QuantLib library, Clojure and any other open source software 
 ; referenced in this library are the propriety of their respective owners
 
-(ns quant.test.math.matrix-utilities.test-matrix
+(ns quant.test.math.matrix.test-matrix
   (:use
-     [quant.math.matrix-utilities.core] 
+     [quant.math.matrix.core] 
      [clojure.test :only (deftest, deftest, is, testing)]))
 
 (def m  [[1 2 3] [4 5 6] [7 8 9]])
