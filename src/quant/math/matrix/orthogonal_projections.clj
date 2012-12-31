@@ -25,20 +25,21 @@
 (defn orthogonal-projections [ov m-cutoff tol]
   "Performs the orthogonal projections algo on a collection of vectors.
 Args are: original vecs, multiplier cutoff and tolerance"
-  (let [hvc (partial handle-valid-v ov)
-        dim (count-cols ov)
+  (let [dim (count-cols ov)
         nr-vecs (count-rows ov)
         onv (matrix nr-vecs dim (repeat 0))
         vv (vec (repeat nr-vecs true))
         curr-v (repeat dim 0)
-        init-arg (struct orthog-proj-args ov onv vv tol m-cutoff curr-v)]
-  (loop [j 0, arg init-arg, projected-vecs []]
+        init-args (struct orthog-proj-args ov onv vv tol m-cutoff curr-v)]
+  (loop [j 0, args init-args, proj-v []]
     (if (= j nr-vecs)
-      {:vectors projected-vecs :vv (arg :vv)}
-      (let [new-arg (if (vv j)
-                      (handle-valid-v arg j)
-                      arg)]
-        (recur (inc j), new-arg, (conj projected-vecs (new-arg :curr-v))))))))
+      {:vectors proj-v :vv (args :vv)}
+      (let [args' (if (vv j)
+                      (handle-valid-v args j)
+                      args)]
+        (recur (inc j), args', (conj proj-v (args' :curr-v))))))))
+
+
 
 (defn- handle-valid-v [{:keys [ov onv vv curr-v m-cutoff tol] :as arg} j]
   (let [num-vecs (count-rows ov)
@@ -49,10 +50,10 @@ Args are: original vecs, multiplier cutoff and tolerance"
                        (recur (inc k) (onbi k vecs))))
         r (onb-loop 0 {:onv onv, :vv vv})
         onv' (update-onv (:onv r) (:vv r) (dec (count-rows ov)) j :type-2)
-        proj-on-orig-dir (inner-prod (ov j) (onv' j))
-        size-muliplier (/ (norm-squared ov j) proj-on-orig-dir)]
-    (if (< (abs size-muliplier) m-cutoff)
-      (assoc arg :onv onv', :vv vv, :curr-v (map #(* % size-muliplier) (onv' j)))
+        proj (inner-prod (ov j) (onv' j)) ;proj-on-orig-direction
+        size-m (/ (norm-squared ov j) proj)] ;size-multiplier
+    (if (< (abs size-m) m-cutoff)
+      (assoc arg :onv onv', :vv vv, :curr-v (map #(* % size-m) (onv' j)))
       (assoc arg :onv onv', :vv (assoc vv j false), :curr-v curr-v))))
 
 (defn- onb-iter [ov tol j k {:keys [onv vv]}]
