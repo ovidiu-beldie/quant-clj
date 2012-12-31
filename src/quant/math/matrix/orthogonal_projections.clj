@@ -14,34 +14,31 @@
 
 (declare handle-valid-v update-onv onb-loop onb-iter)
 
-(defstruct orthog-proj-args :ov :onv :vv :tol :m-cutoff :curr-v)
-
 (defn norm-squared [m r]
   (inner-prod (m r) (m r)))
 
 (defn norm [m r]
   (sqrt (norm-squared m r)))
 
-(defn orthogonal-projections [ov m-cutoff tol]
+(defn orthogonal-projections [orig-vecs multiplier-cutoff tolerance]
   "Performs the orthogonal projections algo on a collection of vectors.
 Args are: original vecs, multiplier cutoff and tolerance"
-  (let [dim (count-cols ov)
-        nr-vecs (count-rows ov)
-        onv (matrix nr-vecs dim (repeat 0))
+  (let [dim (count-cols orig-vecs)
+        nr-vecs (count-rows orig-vecs)
         vv (vec (repeat nr-vecs true))
-        curr-v (repeat dim 0)
-        init-args (struct orthog-proj-args ov onv vv tol m-cutoff curr-v)]
-  (loop [j 0, args init-args, proj-v []]
+        init {:ov orig-vecs :mc multiplier-cutoff :tol tolerance :vv vv
+              :onv (matrix nr-vecs dim (repeat 0))
+              :cv (repeat dim 0)}]
+  (loop [j 0, args init, proj-v []]
     (if (= j nr-vecs)
       {:vectors proj-v :vv (args :vv)}
-      (let [args' (if (vv j)
-                      (handle-valid-v args j)
-                      args)]
-        (recur (inc j), args', (conj proj-v (args' :curr-v))))))))
+      (let [args' (if (vv j) (handle-valid-v args j) args)]
+        (recur (inc j), args', (conj proj-v (args' :cv))))))))
 
-
-
-(defn- handle-valid-v [{:keys [ov onv vv curr-v m-cutoff tol] :as arg} j]
+(defn- handle-valid-v [{:keys [ov onv vv cv mc tol] :as arg} j]
+  "Handle valid vecs.
+Args are: original vecs, ortho-normalized vec, valid vecs,
+current vec, multiplier cutoff, tolerance and j (an index)"
   (let [num-vecs (count-rows ov)
         onbi (partial onb-iter ov tol j)
         onb-loop (fn [k vecs]
@@ -52,12 +49,13 @@ Args are: original vecs, multiplier cutoff and tolerance"
         onv' (update-onv (:onv r) (:vv r) (dec (count-rows ov)) j :type-2)
         proj (inner-prod (ov j) (onv' j)) ;proj-on-orig-direction
         size-m (/ (norm-squared ov j) proj)] ;size-multiplier
-    (if (< (abs size-m) m-cutoff)
-      (assoc arg :onv onv', :vv vv, :curr-v (map #(* % size-m) (onv' j)))
-      (assoc arg :onv onv', :vv (assoc vv j false), :curr-v curr-v))))
+    (if (< (abs size-m) mc)
+      (assoc arg :onv onv', :vv vv, :cv (map #(* % size-m) (onv' j)))
+      (assoc arg :onv onv', :vv (assoc vv j false), :cv cv))))
 
 (defn- onb-iter [ov tol j k {:keys [onv vv]}]
-  "Args are: original vec, tolerance, j, ortho-normalized vec, valid vec, k"
+  "Ortho-normal basis iteration.
+Args are: original vec, tolerance, j, ortho-normalized vecs, valid vecs, k"
   (let [onv' (assoc onv k (ov k))]
     (if (and (not= k j) (vv k))
       (let [upd-onv (update-onv onv' vv k j :type-1)
@@ -70,7 +68,8 @@ Args are: original vecs, multiplier cutoff and tolerance"
       {:vv vv, :onv onv'})))
 
 (defn- update-onv [onv vv k j type]
-  "Args are: original vec, ortho-normalized vec, valid vec, k, j and type"
+  "Update ortho-normal vecs.
+Args are: original vec, ortho-normalized vec, valid vec, k, j and type"
   (let [pred (fn [l] (and (vv l) (not= l j)))
         onv-row (if (= type :type-1) k j)
         r-max (range (if (= type :type-1) k (inc k)))
@@ -82,5 +81,5 @@ Args are: original vecs, multiplier cutoff and tolerance"
         onv-row (if (= type :type-1) k j)]
     (if (empty? onv-filtered)
       onv
-      (let [new-row (map comp-onv-elem (onv onv-row) (transpose onv-filtered))]
-        (assoc onv onv-row new-row)))))
+      (let [row' (map comp-onv-elem (onv onv-row) (transpose onv-filtered))]
+        (assoc onv onv-row row')))))
