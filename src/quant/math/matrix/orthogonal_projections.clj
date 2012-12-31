@@ -46,19 +46,20 @@ current vec, multiplier cutoff, tolerance and j (an index)"
                        vecs
                        (recur (inc k) (onbi k vecs))))
         r (onb-loop 0 {:onv onv, :vv vv})
-        onv' (update-onv (:onv r) (:vv r) (dec (count-rows ov)) j :type-2)
+        onv' (update-onv (:onv r) (:vv r) (dec (count-rows ov)) j :t2)
         proj (inner-prod (ov j) (onv' j)) ;proj-on-orig-direction
-        size-m (/ (norm-squared ov j) proj)] ;size-multiplier
-    (if (< (abs size-m) mc)
-      (assoc arg :onv onv', :vv vv, :cv (map #(* % size-m) (onv' j)))
-      (assoc arg :onv onv', :vv (assoc vv j false), :cv cv))))
+        size-m (/ (norm-squared ov j) proj) ;size-multiplier
+        [vv' cv'] (if (< (abs size-m) mc)
+                    [vv, (map #(* % size-m) (onv' j))]
+                    [(assoc vv j false), cv])]
+    (assoc arg :onv onv' :vv vv' :cv cv')))
 
 (defn- onb-iter [ov tol j k {:keys [onv vv]}]
   "Ortho-normal basis iteration.
 Args are: original vec, tolerance, j, ortho-normalized vecs, valid vecs, k"
   (let [onv' (assoc onv k (ov k))]
     (if (and (not= k j) (vv k))
-      (let [upd-onv (update-onv onv' vv k j :type-1)
+      (let [upd-onv (update-onv onv' vv k j :t1)
             nbs (norm upd-onv k)] ;norm-before-scaling
         (if (< nbs tol)
           {:vv (assoc vv k false) :onv upd-onv}
@@ -71,14 +72,14 @@ Args are: original vec, tolerance, j, ortho-normalized vecs, valid vecs, k"
   "Update ortho-normal vecs.
 Args are: original vec, ortho-normalized vec, valid vec, k, j and type"
   (let [pred (fn [l] (and (vv l) (not= l j)))
-        onv-row (if (= type :type-1) k j)
-        r-max (range (if (= type :type-1) k (inc k)))
+        onv-row (if (= type :t1) k j)
+        r-max (range (if (= type :t1) k (inc k)))
         dot-prods (for [l r-max :when (pred l)] (inner-prod (onv onv-row) (onv l)))
         ord-onv (map vector onv r-max)
         onv-filtered (for [o ord-onv :when (pred (second o))] (first o))
         comp-onv-elem (fn [init-onv-elem onv-filtered-col]
                         (reduce - init-onv-elem (map * dot-prods onv-filtered-col)))
-        onv-row (if (= type :type-1) k j)]
+        onv-row (if (= type :t1) k j)]
     (if (empty? onv-filtered)
       onv
       (let [row' (map comp-onv-elem (onv onv-row) (transpose onv-filtered))]
